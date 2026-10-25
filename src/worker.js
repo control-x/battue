@@ -17,6 +17,11 @@
 // POST /point/delete {id}
 // POST /close   clôture, coordinateur seulement : toutes les données sont supprimées
 // Sans activité pendant 30 jours, la battue s'efface d'elle-même.
+//
+// Admin, avec Authorization: Bearer <ADMIN_TOKEN> ; jamais de contenu de battue :
+// GET  /api/admin/searches -> battues ouvertes : code, dates, nombre de bénévoles connectés, de carreaux, de signalements
+// POST /api/admin/close {id} -> ferme une battue par son code (même effet qu'une clôture)
+// GET  /api/admin/stats    -> compteurs Analytics Engine sur 24 h, 7 et 30 jours
 
 import { DurableObject } from "cloudflare:workers";
 
@@ -36,10 +41,32 @@ const GONE = { error: "Recherche introuvable ou clôturée" };
 // Compteurs admin : un nom d'événement, jamais de contenu
 const stat = (env, event, test) => env.STATS?.writeDataPoint({ blobs: [event, test ? "test" : "réel"], indexes: [event] });
 // Données gardées dans l'UE ; JURISDICTION vide en local (wrangler dev ne gère pas les juridictions)
-const searchStub = (env, id) => {
-  const ns = env.JURISDICTION ? env.SEARCH.jurisdiction(env.JURISDICTION) : env.SEARCH;
-  return ns.get(ns.idFromName(id));
+const stubFor = (env, namespace, name) => {
+  const ns = env.JURISDICTION ? namespace.jurisdiction(env.JURISDICTION) : namespace;
+  return ns.get(ns.idFromName(name));
 };
+const searchStub = (env, id) => stubFor(env, env.SEARCH, id);
+const registryStub = (env) => stubFor(env, env.REGISTRY, "registre");
+
+// Registre des battues pour l'admin : le code et les dates, rien d'autre
+export class Registry extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS searches (id TEXT PRIMARY KEY, created INTEGER, test INTEGER, closed INTEGER, reason TEXT)");
+  }
+  add(id, created, test) {
+    this.ctx.storage.sql.exec("INSERT OR REPLACE INTO searches (id, created, test) VALUES (?, ?, ?)", id, created, test ? 1 : 0);
+  }
+  close(id, reason) {
+    this.ctx.storage.sql.exec("UPDATE searches SET closed = ?, reason = ? WHERE id = ? AND closed IS NULL", Date.now(), reason, id);
+  }
+  get(id) {
+    return this.ctx.storage.sql.exec("SELECT * FROM searches WHERE id = ?", id).toArray()[0] || null;
+  }
+  open() {
+    return this.ctx.storage.sql.exec("SELECT id, created FROM searches WHERE closed IS NULL AND test = 0 ORDER BY created DESC").toArray();
+  }
+}
 
 export class Search extends DurableObject {
   constructor(ctx, env) {
@@ -101,8 +128,28 @@ export class Search extends DurableObject {
     }
   }
 
+  // Pour l'admin : des nombres, jamais le contenu (ni adresse, ni prénoms, ni positions)
+  adminStats() {
+    if (!this.meta) return null;
+    const sectors = { doing: 0, done: 0, alert: 0 };
+    for (const sector of Object.values(this.state.secteurs)) if (sector.s in sectors) sectors[sector.s]++;
+    const roles = this.ctx.getWebSockets().map((ws) => ws.deserializeAttachment()?.role);
+    return {
+      created: this.meta.info.created, lastActivity: this.state.t, sectors, points: Object.keys(this.state.points).length,
+      volunteersOnline: roles.filter((role) => role === "vol").length, coordOnline: roles.includes("coord"),
+      volunteerSeen: !!this.meta.volunteerSeen, sectorSeen: !!this.meta.sectorSeen,
+    };
+  }
+
+  async adminClose() {
+    if (!this.meta) return false;
+    await this.wipe("admin-close");
+    return true;
+  }
+
   async wipe(event) {
     stat(this.env, event, this.meta?.info.test);
+    if (this.meta?.id) await registryStub(this.env).close(this.meta.id, event);
     for (const ws of this.ctx.getWebSockets()) try { ws.close(4004, "clôturée"); } catch {}
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
@@ -261,8 +308,10 @@ async function createSearch(req, env) {
   const coord = randomToken(), vol = randomToken();
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = randomCode();
-    const r = await searchStub(env, id).fetch("https://do/init", { method: "POST", body: JSON.stringify({ info, coord, vol, photo }) });
-    if (r.ok) return json({ id, coord, vol });
+    const r = await searchStub(env, id).fetch("https://do/init", { method: "POST", body: JSON.stringify({ id, info, coord, vol, photo }) });
+    if (!r.ok) continue;
+    await registryStub(env).add(id, info.created, info.test);
+    return json({ id, coord, vol });
   }
   return json({ error: "Réessayez" }, 500);
 }
@@ -271,7 +320,14 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
-  if (url.pathname === "/api/admin/stats") return adminStats(req, env);
+  if (url.pathname.startsWith("/api/admin/")) {
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
+    if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
+    if (url.pathname === "/api/admin/stats") return adminStats(env);
+    if (url.pathname === "/api/admin/searches") return adminSearches(env);
+    if (url.pathname === "/api/admin/close" && req.method === "POST") return adminCloseSearch(req, env);
+    return json({ error: "not found" }, 404);
+  }
   const api = url.pathname.match(/^\/api\/r\/([a-z0-9]{6})(\/[a-z/]+)$/);
   if (api) {
     if (api[2] === "/init") return json({ error: "not found" }, 404);
@@ -283,9 +339,7 @@ async function handle(req, env) {
 
 // Console admin : uniquement des compteurs d'événements (Analytics Engine), jamais le contenu d'une battue.
 // Secrets : ADMIN_TOKEN (jeton de la page /admin), CF_ACCOUNT_ID et CF_API_TOKEN (droit « Account Analytics : Read »).
-async function adminStats(req, env) {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
-  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
+async function adminStats(env) {
   if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Secrets CF_ACCOUNT_ID et CF_API_TOKEN manquants" }, 500);
   const sql = async (query) => {
     const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`, {
@@ -304,6 +358,29 @@ async function adminStats(req, env) {
   } catch (err) {
     return json({ error: err.message }, 502);
   }
+}
+
+// Battues ouvertes, avec leurs nombres ; une battue déjà effacée est retirée du registre au passage
+async function adminSearches(env) {
+  const registry = registryStub(env);
+  const rows = await registry.open();
+  const searches = await Promise.all(rows.map(async (row) => {
+    const stats = await searchStub(env, row.id).adminStats();
+    if (!stats) await registry.close(row.id, "absent");
+    return stats && { id: row.id, ...stats };
+  }));
+  return json({ searches: searches.filter(Boolean) });
+}
+
+// Fermeture par l'admin (abus, battue oubliée) : même effet qu'une clôture par le coordinateur
+async function adminCloseSearch(req, env) {
+  let body;
+  try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+  const id = String(body.id || "").trim().toLowerCase();
+  if (!/^[a-z0-9]{6}$/.test(id)) return json({ error: "Code de battue invalide (6 caractères)" }, 400);
+  const existed = await searchStub(env, id).adminClose();
+  if (!existed) await registryStub(env).close(id, "absent");
+  return json({ ok: true, existed });
 }
 
 // Test de bout en bout : crée, rejoint, commence un secteur, signale, clôture, vérifie la suppression
@@ -329,6 +406,7 @@ async function selfTest(env) {
   expect((await call(`/api/r/${id}/close`, vol, {})).status === 403, "clôture refusée au bénévole");
   expect((await call(`/api/r/${id}/close`, coord, {})).status === 200, "clôture");
   expect((await call(`/api/r/${id}/state`, coord)).status === 404, "données supprimées");
+  expect((await registryStub(env).get(id))?.closed > 0, "registre à jour");
 }
 
 async function notify(env, message) {

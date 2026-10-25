@@ -20,9 +20,17 @@ JURISDICTION = "eu"
 name = "SEARCH"
 class_name = "Search"
 
+[[durable_objects.bindings]]
+name = "REGISTRY"
+class_name = "Registry"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Search"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Registry"]
 
 # Compteurs admin (aucun contenu de recherche)
 [[analytics_engine_datasets]]

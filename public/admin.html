@@ -8,47 +8,140 @@
 <title>Battue – admin</title>
 <link rel="stylesheet" href="/style.css">
 <style>
-  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-bottom:2.5rem}
-  th,td{padding:.6rem .4rem;border-bottom:1px solid #d8d8d3;text-align:right}
+  .admin{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+  .admin section+section{margin-top:3rem}
+  .admin h2{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap}
+  .admin h2 small{font:600 1rem Archivo,system-ui,sans-serif;text-transform:none;color:var(--ink-2)}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:.6rem .5rem;border-bottom:1px solid #d8d8d3;text-align:right;vertical-align:middle}
   th:first-child,td:first-child{text-align:left}
-  thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.9rem;border-bottom:2px solid var(--ink)}
+  thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.85rem;border-bottom:2px solid var(--ink)}
+  td.code{font-weight:800;font-stretch:85%;letter-spacing:.04em;font-size:1.1rem}
   td.warn{color:var(--grid);font-weight:800}
-  .status{display:flex;gap:.6rem;align-items:center;font-weight:700;margin:0 0 2rem}
-  .status i{width:14px;height:14px;border-radius:50%;background:var(--park-ink)}
+  td.calm{color:var(--ink-2)}
+  td.tiles{white-space:nowrap}
+  .tiles span{display:inline-flex;align-items:center;gap:.3rem;margin-left:.7rem;white-space:nowrap}
+  .sw{display:inline-block;width:14px;height:14px;border:1px solid var(--grid);background:var(--sheet)}
+  .sw.doing{background:var(--road)}
+  .sw.done{background:repeating-linear-gradient(45deg,var(--park-ink) 0 2px,var(--sheet) 2px 5px)}
+  .sw.alert{background:var(--grid)}
+  .steps{display:inline-flex;gap:3px}
+  .steps i{width:14px;height:14px;border:1px solid var(--grid);background:var(--sheet)}
+  .steps i.on{background:repeating-linear-gradient(45deg,var(--park-ink) 0 2px,var(--sheet) 2px 5px)}
+  td .btn{min-height:40px;padding:.35em .8em;font-size:.9rem}
+  .status{display:flex;gap:.6rem;align-items:center;font-weight:700;margin:0 0 1.5rem}
+  .status i{width:14px;height:14px;border-radius:50%;background:var(--park-ink);flex:none}
   .status.ko i{background:var(--grid)}
+  .closeform{display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap}
+  .closeform label{margin:0;flex:1 1 12rem}
+  .empty{padding:1.25rem 0;color:var(--ink-2)}
+  .legendline{font-size:.95rem;color:var(--ink-2);margin:.75rem 0 0}
 </style>
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Battue</a>
-  <span class="msg" style="margin:0">Admin : compteurs seulement, aucun contenu de battue</span>
+  <span class="msg" style="margin:0">Admin · des nombres, jamais le contenu d'une battue</span>
 </header>
-<main class="form-page" style="max-width:52rem">
+<main class="admin">
   <h1>Suivi</h1>
-  <p id="msg" class="msg" role="status">Chargement…</p>
-  <div id="out"></div>
+  <p id="msg" class="msg" role="status"></p>
+
+  <section>
+    <h2>Battues ouvertes <small id="opencount"></small></h2>
+    <div class="scroll" id="searches"><p class="empty">Chargement…</p></div>
+    <p class="legendline">Carreaux : <i class="sw doing"></i> en cours, <i class="sw done"></i> faits, <i class="sw alert"></i> à revoir. Parcours : <span class="steps"><i class="on"></i><i></i><i></i></span> créée, puis premier bénévole, puis premier carreau. Les battues sans activité depuis 30 jours s'effacent seules.</p>
+  </section>
+
+  <section>
+    <h2>Fermer une battue</h2>
+    <p>Pour un signalement d'abus ou une battue oubliée. La fermeture supprime toutes ses données, comme une clôture par le coordinateur.</p>
+    <form class="closeform" id="closeform">
+      <label>Code de la battue<span class="hint">Les 6 caractères après /r/ dans son lien.</span><input id="closeid" autocomplete="off" spellcheck="false" maxlength="6" placeholder="ex. kgnrbu"></label>
+      <button class="btn btn-primary" type="submit">Fermer</button>
+    </form>
+    <p class="msg" id="closemsg" role="status"></p>
+  </section>
+
+  <section>
+    <h2>Compteurs</h2>
+    <div id="counters"><p class="empty">Chargement…</p></div>
+  </section>
 </main>
 <script>
 // Jeton admin dans la partie # du lien (/admin#t=…), gardé sur cet appareil
 var hash=new URLSearchParams(location.hash.slice(1)), TOKEN=hash.get("t");
 try{if(TOKEN)localStorage.setItem("battue_admin",TOKEN);else TOKEN=localStorage.getItem("battue_admin");}catch(e){}
 if(hash.has("t"))history.replaceState(null,"",location.pathname);
-var msg=document.getElementById("msg");
-var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Battues clôturées"],["expire","Battues effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["selftest-ko","Tests automatiques en échec"]];
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
+function ago(t){if(!t)return "–";var m=Math.max(0,Math.round((Date.now()-t)/60000));return m<60?m+" min":m<1440?Math.floor(m/60)+" h "+("0"+m%60).slice(-2):Math.floor(m/1440)+" j";}
 function when(t){return t?new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"jamais";}
-if(!TOKEN){msg.textContent="Lien incomplet : ouvrez /admin#t=<jeton admin>.";msg.className="msg err";}
-else fetch("/api/admin/stats",{headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){return r.json().then(function(j){
-  if(!r.ok)throw new Error(r.status===403?"Jeton admin refusé.":j.error||"Erreur "+r.status);return j;});
-}).then(function(j){
-  var periods=Object.keys(j.periods), ok=j.selftest["selftest-ok"]||0, ko=j.selftest["selftest-ko"]||0, healthy=ok>ko&&Date.now()-ok<2*3600e3;
-  var html='<p class="status'+(healthy?'':' ko')+'"><i></i>Test automatique : '+(healthy?"OK, dernier passage "+when(ok):"en échec ou absent depuis "+when(Math.max(ok,ko)))+'</p>';
-  html+='<table><thead><tr><th>Événement</th>'+periods.map(function(p){return "<th>"+p+"</th>";}).join("")+'</tr></thead><tbody>';
-  html+=ROWS.map(function(row){return '<tr><td>'+row[1]+'</td>'+periods.map(function(p){var n=j.periods[p][row[0]]||0;return '<td'+((row[0]==="selftest-ko"||row[0]==="no-volunteer")&&n?' class="warn"':'')+'>'+n+'</td>';}).join("")+'</tr>';}).join("");
-  html+='</tbody></table>';
-  var month=j.periods["30 jours"], open=(month.create||0)-(month.close||0)-(month.expire||0);
-  html+='<p>Battues probablement encore ouvertes (créées moins clôturées sur 30 jours)&nbsp;: <b>'+Math.max(0,open)+'</b></p>';
-  document.getElementById("out").innerHTML=html; msg.textContent="";
-}).catch(function(err){msg.textContent=err.message==="Failed to fetch"?"Pas de connexion.":err.message;msg.className="msg err";});
+function api(path,body){
+  return fetch("/api/admin/"+path,{method:body?"POST":"GET",headers:{Authorization:"Bearer "+TOKEN,"Content-Type":"application/json"},body:body&&JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return {};}).then(function(j){
+      if(r.status===403)throw new Error("Jeton admin refusé : ouvrez /admin#t=<jeton>.");
+      if(!r.ok)throw new Error(j.error||"Erreur "+r.status);
+      return j;});},function(){throw new Error("Pas de connexion.");});
+}
+function fail(el,err){el.innerHTML='<p class="msg err">'+esc(err.message)+'</p>';}
+
+// Battues ouvertes
+function loadSearches(){
+  var box=document.getElementById("searches");
+  api("searches").then(function(j){
+    document.getElementById("opencount").textContent=j.searches.length?j.searches.length+" en cours":"";
+    if(!j.searches.length){box.innerHTML='<p class="empty">Aucune battue ouverte.</p>';return;}
+    box.innerHTML='<table><thead><tr><th>Code</th><th>Ouverte depuis</th><th>Dernière activité</th><th>Bénévoles en ligne</th><th>Carreaux</th><th>Signalements</th><th>Parcours</th><th></th></tr></thead><tbody>'+
+      j.searches.map(function(s){
+        // Ouverte depuis plus de 30 min sans aucun bénévole : l'invitation n'a probablement pas fonctionné
+        var stuck=!s.volunteerSeen&&Date.now()-s.created>30*60000;
+        return '<tr><td class="code">'+esc(s.id)+'</td><td>'+ago(s.created)+'</td><td>'+ago(s.lastActivity)+'</td>'+
+          '<td'+(stuck?' class="warn" title="Aucun bénévole depuis plus de 30 min"':s.volunteersOnline?'':' class="calm"')+'>'+s.volunteersOnline+(s.coordOnline?' + coord.':'')+'</td>'+
+          '<td class="tiles"><span title="En cours"><i class="sw doing"></i>'+s.sectors.doing+'</span><span title="Faits"><i class="sw done"></i>'+s.sectors.done+'</span><span title="À revoir"><i class="sw alert"></i>'+s.sectors.alert+'</span></td><td>'+s.points+'</td>'+
+          '<td><span class="steps"><i class="on"></i><i'+(s.volunteerSeen?' class="on"':'')+'></i><i'+(s.sectorSeen?' class="on"':'')+'></i></span></td>'+
+          '<td><button class="btn" type="button" data-close="'+esc(s.id)+'">Fermer</button></td></tr>';
+      }).join("")+'</tbody></table>';
+  }).catch(function(err){fail(box,err);});
+}
+// Fermer : deux appuis, le second confirme
+document.getElementById("searches").onclick=function(e){
+  var b=e.target.closest("[data-close]"); if(!b)return;
+  if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Confirmer";b.classList.add("btn-primary");return;}
+  b.disabled=true; closeSearch(b.dataset.close,function(){loadSearches();});
+};
+document.getElementById("closeform").onsubmit=function(e){
+  e.preventDefault();
+  var input=document.getElementById("closeid"), btn=this.querySelector("button");
+  if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent="Confirmer la fermeture";return;}
+  delete btn.dataset.armed; btn.textContent="Fermer";
+  closeSearch(input.value.trim(),function(){input.value="";loadSearches();});
+};
+function closeSearch(id,done){
+  var msg=document.getElementById("closemsg");
+  msg.className="msg"; msg.textContent="Fermeture de "+id+"…";
+  api("close",{id:id}).then(function(j){
+    msg.textContent=j.existed?"Battue "+id+" fermée, ses données sont supprimées.":"Aucune battue ouverte avec le code "+id+".";
+    done();
+  }).catch(function(err){msg.className="msg err";msg.textContent=err.message;});
+}
+
+// Compteurs (Analytics Engine)
+var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["selftest-ko","Tests automatiques en échec"]];
+function loadCounters(){
+  var box=document.getElementById("counters");
+  api("stats").then(function(j){
+    var periods=Object.keys(j.periods), ok=j.selftest["selftest-ok"]||0, ko=j.selftest["selftest-ko"]||0, healthy=ok>ko&&Date.now()-ok<2*3600e3;
+    box.innerHTML='<p class="status'+(healthy?'':' ko')+'"><i></i>Test automatique : '+(healthy?"OK, dernier passage "+when(ok):"en échec ou absent depuis "+when(Math.max(ok,ko)))+'</p>'+
+      '<div class="scroll"><table><thead><tr><th>Événement</th>'+periods.map(function(p){return "<th>"+esc(p)+"</th>";}).join("")+'</tr></thead><tbody>'+
+      ROWS.map(function(row){return '<tr><td>'+row[1]+'</td>'+periods.map(function(p){var n=j.periods[p][row[0]]||0;return '<td'+((row[0]==="selftest-ko"||row[0]==="no-volunteer")&&n?' class="warn"':'')+'>'+n+'</td>';}).join("")+'</tr>';}).join("")+
+      '</tbody></table></div>';
+  }).catch(function(err){fail(box,err);});
+}
+
+if(!TOKEN){var m=document.getElementById("msg");m.textContent="Lien incomplet : ouvrez /admin#t=<jeton admin>.";m.className="msg err";}
+else{loadSearches();loadCounters();setInterval(loadSearches,60000);}
 </script>
 </body>
 </html>

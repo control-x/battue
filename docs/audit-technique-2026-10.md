@@ -42,3 +42,12 @@
 
 ## Consignes à l'agent
 Créer une PR distincte pour les correctifs, avec tests, sans déploiement automatique ni modification des données historiques. Prioriser P1, conserver l'expérience sans compte et l'accès rapide en urgence. Ne pas modifier la structure des statistiques quotidiennes ni ajouter une purge automatisée à ce stade. Aucun changement de backend ou de fournisseur n'est demandé.
+
+## Suivi (branche `fix/audit-p1-p2`)
+- **P1 WebSocket** : chaque connexion doit s'authentifier en 10 s, sinon elle est refermée (code 4001) par l'alarme de la Durable Object, compatible avec l'hibernation ; 1 000 connexions au plus par battue. Le client n'affiche « En direct » qu'à la réception d'un état valide, et repasse à l'HTTP sur message illisible ou fermeture.
+- **P1 Abus** : `POST /api/report` limité par battue (binding Rate Limiting), refusé si la battue n'est pas ouverte (registre) ; motif gardé dans le registre, visible dans `/admin`, supprimé à la fermeture ; ntfy ne reçoit que le code, au plus une fois toutes les 10 minutes par battue. `POST /api/new` limité largement par connexion (20/min, approximatif), sans captcha.
+- **P1 Géolocalisation** : `POST /point` borné comme la création.
+- **P2 Concurrence** : prise simultanée d'un même carreau par deux appareils testée (un succès, un refus).
+- **P2 Supervision** : `tests/e2e.mjs`, hors production, contre `wrangler dev` : WebSocket valide, jeton invalide, connexion sans authentification, concurrence, bornes, abus (inexistant, motif, débit, battue fermée), clôture diffusée, historique.
+- **P2 Confidentialité** : notice nuancée (stockage UE mais réseau mondial ; historique non qualifié d'anonyme, accès admin, totaux seulement, 5 ans au plus) ; export admin agrégé seulement.
+- Non traité, comme demandé : structure des statistiques, purge automatique, fournisseur ; idempotence (aucun cas réel observé).

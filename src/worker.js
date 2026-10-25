@@ -4,7 +4,7 @@
 // l'en-tête Authorization (ils voyagent dans la partie # du lien, jamais dans l'URL côté serveur).
 //
 // POST /api/new {name,address,lat,lng,since,description,phone,whatsapp,photo,police} -> {id,coord,vol}
-// POST /api/report {id,reason} -> signalement d'abus, transmis à l'admin par ntfy
+// POST /api/report {id,reason} -> signalement d'abus sur une battue ouverte ; motif visible dans /admin, ntfy prévenu
 // Sous /api/r/<id>, avec Authorization: Bearer <jeton> :
 // GET  /state            -> {role, info, secteurs:{A1:{s,e,n,d,f,ds,t}}, points:[{id,lat,lng,txt,t,who}]}
 // GET  /log              -> {log:[{t,txt}]} journal horodaté, coordinateur seulement
@@ -51,6 +51,9 @@ const departement = (address) => {
   return m ? (m[1].startsWith("97") ? m[1].slice(0, 3) : m[1].slice(0, 2)) : null;
 };
 const NO_VOLUNTEER_MS = 30 * 60 * 1000;
+const AUTH_TIMEOUT_MS = 10 * 1000; // un websocket doit s'authentifier dans ce délai
+const MAX_SOCKETS = 1000;
+const REPORT_COOLDOWN_MS = 10 * 60 * 1000; // une notification d'abus au plus par battue dans ce délai
 const GONE = { error: "Recherche introuvable ou clôturée" };
 // Compteurs admin : un nom d'événement, jamais de contenu
 const stat = (env, event, test) => env.STATS?.writeDataPoint({ blobs: [event, test ? "test" : "réel"], indexes: [event] });
@@ -117,6 +120,18 @@ export class Registry extends DurableObject {
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS searches (id TEXT PRIMARY KEY, created INTEGER, test INTEGER, closed INTEGER, reason TEXT)");
     // Historique anonyme, gardé après l'effacement des battues : aucune donnée personnelle, aucun code de battue
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS history (closed INTEGER, data TEXT)");
+    // Signalements d'abus d'une battue ouverte, visibles seulement dans /admin, supprimés à sa fermeture
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS reports (id TEXT, at INTEGER, reason TEXT)");
+  }
+  addReport(id, reason) {
+    const search = this.get(id);
+    if (!search || search.closed) return { open: false };
+    const last = this.ctx.storage.sql.exec("SELECT MAX(at) AS at FROM reports WHERE id = ?", id).toArray()[0]?.at;
+    this.ctx.storage.sql.exec("INSERT INTO reports (id, at, reason) VALUES (?, ?, ?)", id, Date.now(), reason);
+    return { open: true, notify: !last || Date.now() - last > REPORT_COOLDOWN_MS };
+  }
+  reports(id) {
+    return this.ctx.storage.sql.exec("SELECT at, reason FROM reports WHERE id = ? ORDER BY at", id).toArray();
   }
   archive(row) {
     this.ctx.storage.sql.exec("INSERT INTO history (closed, data) VALUES (?, ?)", Date.now(), JSON.stringify(row));
@@ -129,6 +144,7 @@ export class Registry extends DurableObject {
   }
   close(id, reason) {
     this.ctx.storage.sql.exec("UPDATE searches SET closed = ?, reason = ? WHERE id = ? AND closed IS NULL", Date.now(), reason, id);
+    this.ctx.storage.sql.exec("DELETE FROM reports WHERE id = ?", id);
   }
   get(id) {
     return this.ctx.storage.sql.exec("SELECT * FROM searches WHERE id = ?", id).toArray()[0] || null;
@@ -204,9 +220,18 @@ export class Search extends DurableObject {
 
   // Une seule alarme par objet : la plus proche entre l'alerte « aucun bénévole » et l'effacement après 30 jours
   scheduleAlarm() {
-    const due = [this.state.t + IDLE_MS];
+    const due = [this.state.t + IDLE_MS, ...this.pendingSockets().map((pending) => pending.since + AUTH_TIMEOUT_MS)];
     if (!this.meta.volunteerSeen && !this.meta.alerted) due.push(this.meta.info.created + NO_VOLUNTEER_MS);
     return this.ctx.storage.setAlarm(Math.min(...due));
+  }
+
+  // Websockets ouverts mais pas encore authentifiés : refermés après AUTH_TIMEOUT_MS (compatible avec l'hibernation)
+  pendingSockets() {
+    return this.ctx.getWebSockets().map((ws) => ({ ws, ...ws.deserializeAttachment() })).filter((socket) => !socket.role);
+  }
+  closeStaleSockets() {
+    for (const pending of this.pendingSockets())
+      if (Date.now() - (pending.since || 0) >= AUTH_TIMEOUT_MS) try { pending.ws.close(4001, "authentification attendue"); } catch {}
   }
 
   roleOf(token) {
@@ -242,7 +267,7 @@ export class Search extends DurableObject {
     stat(this.env, event, this.meta.info.test);
     const msg = JSON.stringify(this.publicState());
     for (const ws of this.ctx.getWebSockets()) {
-      if (ws.deserializeAttachment()) try { ws.send(msg); } catch {}
+      if (ws.deserializeAttachment()?.role) try { ws.send(msg); } catch {}
     }
   }
 
@@ -279,7 +304,9 @@ export class Search extends DurableObject {
   async alarm() {
     if (!this.meta) return;
     if (Date.now() >= this.state.t + IDLE_MS) return this.wipe("expire");
-    if (!this.meta.volunteerSeen && !this.meta.alerted) {
+    this.closeStaleSockets();
+    // L'alarme sert aussi aux websockets : l'alerte n'a lieu qu'une fois le délai réellement écoulé
+    if (!this.meta.volunteerSeen && !this.meta.alerted && Date.now() >= this.meta.info.created + NO_VOLUNTEER_MS) {
       this.meta.alerted = true;
       await this.ctx.storage.put("meta", this.meta);
       stat(this.env, "no-volunteer", this.meta.info.test);
@@ -305,8 +332,12 @@ export class Search extends DurableObject {
     // Le navigateur ne peut pas mettre d'en-tête sur un websocket : le jeton arrive dans le premier message
     if (url.pathname === "/ws") {
       if (req.headers.get("Upgrade") !== "websocket") return json({ error: "websocket attendu" }, 426);
+      this.closeStaleSockets();
+      if (this.ctx.getWebSockets().length >= MAX_SOCKETS) return json({ error: "Trop de connexions" }, 503);
       const { 0: client, 1: server } = new WebSocketPair();
       this.ctx.acceptWebSocket(server);
+      server.serializeAttachment({ since: Date.now() });
+      await this.scheduleAlarm();
       return new Response(null, { status: 101, webSocket: client });
     }
 
@@ -380,7 +411,7 @@ export class Search extends DurableObject {
     }
     if (url.pathname === "/point") {
       const lat = +b.lat, lng = +b.lng;
-      if (!isFinite(lat) || !isFinite(lng)) return json({ error: "pos" }, 400);
+      if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return json({ error: "pos" }, 400);
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), t: Date.now() };
       this.state.points[id] = point;
@@ -419,6 +450,9 @@ export class Search extends DurableObject {
 
 // Création : l'adresse est géocodée dans le navigateur (Base Adresse Nationale), la photo déjà réduite
 async function createSearch(req, env) {
+  // Limite large et approximative par connexion, contre la création automatisée ; jamais de captcha
+  const limit = env.CREATE_LIMITER ? await env.CREATE_LIMITER.limit({ key: req.headers.get("CF-Connecting-IP") || "local" }) : { success: true };
+  if (!limit.success) return json({ error: "Trop de battues créées depuis cette connexion : réessayez dans une minute. En cas d'urgence, appelez le 17." }, 429);
   let b;
   try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
   const lat = +b.lat, lng = +b.lng;
@@ -533,15 +567,19 @@ async function sheetRequest(req, env, id) {
   return json({ error: "not found" }, 404);
 }
 
-// Signalement d'abus depuis une carte : l'admin est prévenu (ntfy) avec le code, puis ferme la battue depuis /admin.
-// ponytail: aucune limite d'envoi ; en ajouter une si quelqu'un en abuse.
+// Signalement d'abus depuis une carte : le motif est gardé dans le registre (visible dans /admin, supprimé à la fermeture),
+// l'admin est prévenu par ntfy avec le seul code de la battue, au plus une fois par REPORT_COOLDOWN_MS.
 async function reportAbuse(req, env) {
   let body;
   try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
   const id = String(body.id || "");
   if (!/^[a-z0-9]{6}$/.test(id)) return json({ error: "Code de battue invalide" }, 400);
+  const limit = env.REPORT_LIMITER ? await env.REPORT_LIMITER.limit({ key: id }) : { success: true };
+  if (!limit.success) return json({ error: "Trop de signalements pour cette battue : réessayez dans une minute." }, 429);
+  const report = await registryStub(env).addReport(id, clip(body.reason, 500));
+  if (!report.open) return json({ error: "Battue introuvable ou déjà fermée" }, 404);
   stat(env, "abuse-report");
-  await notify(env, `Battue : signalement d'abus sur la battue ${id}. Motif : ${clip(body.reason, 500) || "non précisé"}. Fermer : https://www.battue.org/admin`);
+  if (report.notify) await notify(env, `Battue : signalement d'abus sur la battue ${id}. Motif et fermeture : https://www.battue.org/admin`);
   return json({ ok: true });
 }
 
@@ -552,7 +590,7 @@ async function adminSearches(env) {
   const searches = await Promise.all(rows.map(async (row) => {
     const stats = await searchStub(env, row.id).adminStats();
     if (!stats) await registry.close(row.id, "absent");
-    return stats && { id: row.id, ...stats };
+    return stats && { id: row.id, ...stats, reports: await registry.reports(row.id) };
   }));
   return json({ searches: searches.filter(Boolean) });
 }

@@ -40,6 +40,23 @@ new_sqlite_classes = ["Registry"]
 tag = "v3"
 new_sqlite_classes = ["Sheet"]
 
+# Limites de débit, approximatives et par emplacement Cloudflare
+[[ratelimits]]
+name = "CREATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
+[[ratelimits]]
+name = "REPORT_LIMITER"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
 # Compteurs admin (aucun contenu de recherche)
 [[analytics_engine_datasets]]
 binding = "STATS"

@@ -22,6 +22,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font:400 1.125rem/1.5 Archivo,system-ui,sans-serif;color:var(--ink);background:var(--paper);caret-color:var(--grid)}
 ::selection{background:var(--road);color:var(--ink)}

@@ -55,6 +55,7 @@ export class Search extends DurableObject {
     if (role !== "vol" || this.meta.volunteerSeen) return;
     this.meta.volunteerSeen = true;
     await this.ctx.storage.put("meta", this.meta);
+    stat(this.env, "first-volunteer", this.meta.info.test);
   }
 
   // Une seule alarme par objet : la plus proche entre l'alerte « aucun bénévole » et l'effacement après 30 jours
@@ -79,6 +80,12 @@ export class Search extends DurableObject {
 
   // entry : ligne du journal horodaté (exportable pour la police), gardé à part car jamais diffusé
   async save(event, entry) {
+    // Étapes du parcours pour l'admin : création → premier bénévole → premier carreau
+    if (event === "sector" && !this.meta.sectorSeen) {
+      this.meta.sectorSeen = true;
+      await this.ctx.storage.put("meta", this.meta);
+      stat(this.env, "first-sector", this.meta.info.test);
+    }
     this.state.t = Date.now();
     await this.ctx.storage.put("state", this.state);
     if (entry) {
@@ -264,6 +271,7 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
+  if (url.pathname === "/api/admin/stats") return adminStats(req, env);
   const api = url.pathname.match(/^\/api\/r\/([a-z0-9]{6})(\/[a-z/]+)$/);
   if (api) {
     if (api[2] === "/init") return json({ error: "not found" }, 404);
@@ -271,6 +279,31 @@ async function handle(req, env) {
   }
   if (/^\/r\/[a-z0-9]{6}\/?$/.test(url.pathname)) return env.ASSETS.fetch(new Request(new URL("/app", url), req));
   return env.ASSETS.fetch(req);
+}
+
+// Console admin : uniquement des compteurs d'événements (Analytics Engine), jamais le contenu d'une battue.
+// Secrets : ADMIN_TOKEN (jeton de la page /admin), CF_ACCOUNT_ID et CF_API_TOKEN (droit « Account Analytics : Read »).
+async function adminStats(req, env) {
+  const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
+  if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
+  if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Secrets CF_ACCOUNT_ID et CF_API_TOKEN manquants" }, 500);
+  const sql = async (query) => {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`, {
+      method: "POST", headers: { Authorization: "Bearer " + env.CF_API_TOKEN }, body: query + " FORMAT JSON",
+    });
+    if (!r.ok) throw new Error("Analytics Engine " + r.status + " : " + (await r.text()).slice(0, 200));
+    return (await r.json()).data;
+  };
+  const counts = (days) => sql(`SELECT blob1 AS event, SUM(_sample_interval) AS n FROM battue WHERE blob2 = 'réel' AND timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY event`);
+  try {
+    const [day, week, month, selftest] = await Promise.all([counts(1), counts(7), counts(30),
+      sql("SELECT blob1 AS event, toUnixTimestamp(MAX(timestamp)) AS t FROM battue WHERE blob1 IN ('selftest-ok', 'selftest-ko') GROUP BY event")]);
+    const byEvent = (rows) => Object.fromEntries(rows.map((row) => [row.event, +row.n]));
+    return json({ periods: { "24 h": byEvent(day), "7 jours": byEvent(week), "30 jours": byEvent(month) },
+      selftest: Object.fromEntries(selftest.map((row) => [row.event, +row.t * 1000])) });
+  } catch (err) {
+    return json({ error: err.message }, 502);
+  }
 }
 
 // Test de bout en bout : crée, rejoint, commence un secteur, signale, clôture, vérifie la suppression

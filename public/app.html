@@ -58,6 +58,7 @@
   #info.mine{color:var(--park-ink);cursor:pointer;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
   #sum{all:unset;display:block;margin-top:.15rem;font-weight:700;cursor:pointer;color:var(--ink);text-decoration:underline;text-decoration-color:var(--grid-soft);text-underline-offset:3px}
   #sum:focus-visible{outline:3px solid var(--focus)}
+  #sum[hidden]{display:none}
   #sum .late{color:var(--grid)}
   #list{max-height:34vh;overflow:auto;margin:.4rem 0;border-top:2px solid var(--ink)}
   #list div{padding:.45rem 0;border-bottom:1px solid #d8d8d3;cursor:pointer}
@@ -124,6 +125,11 @@
   .rules li::marker{color:var(--grid);font-weight:800}
   .dlabel{font:800 1.05rem/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin:1rem 0 .25rem}
 
+  #toast{position:absolute;z-index:1002;left:10px;right:10px;top:calc(76px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--sheet);border:3px dashed var(--grid);box-shadow:var(--shadow);font-weight:700}
+  #toast[hidden]{display:none}
+  #toast .i{color:var(--grid);width:24px;height:24px}
+  #toast span{flex:1}
+  #toast button{min-height:44px;padding:.4em .8em}
   #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px}
   #gone .cartouche{max-width:26rem;text-align:left;font-size:1.15rem}
@@ -197,6 +203,7 @@
   </div>
   </div>
 </div>
+<div id="toast" role="alert" hidden></div>
 <div id="gone" hidden><div class="cartouche"><div class="brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Battue</div><p id="gonemsg"></p></div></div>
 
 <dialog id="davis">
@@ -213,6 +220,7 @@
     <li>Jamais de berge seul, ni la nuit.</li>
     <li>Commencez votre carreau sur la carte en partant, terminez-le en rentrant.</li>
   </ol>
+  <button id="poster-img" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-send"/></svg>Partager l'affiche (image)</button>
   <button id="print" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-printer"/></svg>Imprimer l'affiche (PDF)</button>
   <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
 </dialog>
@@ -250,6 +258,9 @@
   <hr>
   <label>Votre lien de coordinateur<span class="hint">Gardez-le pour revenir ici. Ne le partagez pas.</span><input id="coordLink" readonly></label>
   <button id="cpCoord" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-lock"/></svg>Copier mon lien</button>
+  <hr>
+  <button id="alerts" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-clock"/></svg>Alerte si un binôme est en retard</button>
+  <p class="msg" id="alertsmsg">Une notification sur ce téléphone, tant que cette page reste ouverte.</p>
   <hr>
   <button id="journal" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-download"/></svg>Exporter le journal (police)</button>
   <hr>
@@ -488,6 +499,7 @@ function paint(){
     cells[id].lbl.setIcon(L.divIcon({className:"",html:'<div class="lbl">'+id+(sub?"<small>"+sub+"</small>":"")+(s.e&&s.s!=="todo"?"<small>"+esc(s.e)+"</small>":"")+"</div>",iconSize:[90,46],iconAnchor:[45,23]}));
   });
   renderList(); renderClock();
+  if(ROLE==="coord")lateAlerts();
 }
 function drawPoints(points){
   pointsLayer.clearLayers();
@@ -582,20 +594,100 @@ function renderClock(){
 function loadScript(src,integrity){
   return new Promise(function(ok,ko){var el=document.createElement("script");el.src=src;el.integrity=integrity;el.crossOrigin="anonymous";el.onload=ok;el.onerror=ko;document.head.appendChild(el);});
 }
+function qrDataUrl(){
+  return (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
+    var qr=qrcode(0,"M"); qr.addData(volLink()); qr.make(); return qr.createDataURL(8,2);
+  });
+}
+function posterTitle(){return INFO.name?"Avez-vous vu "+INFO.name+" ?":"Personne disparue";}
+function posterCall(){return INFO.phone?"Si vous la voyez : "+INFO.phone:"Si vous la voyez : appelez le 17";}
 document.getElementById("print").onclick=function(){
   var btn=this;
-  (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
-    var qr=qrcode(0,"M"); qr.addData(volLink()); qr.make();
-    var pqr=document.getElementById("pqr"); pqr.src=qr.createDataURL(8,2); pqr.hidden=false;
-    document.getElementById("pname").textContent=INFO.name?"Avez-vous vu "+INFO.name+" ?":"Personne disparue";
+  qrDataUrl().then(function(qr){
+    var pqr=document.getElementById("pqr"); pqr.src=qr; pqr.hidden=false;
+    document.getElementById("pname").textContent=posterTitle();
     var photo=document.getElementById("aphoto"), pphoto=document.getElementById("pphoto");
     pphoto.src=photo.src; pphoto.hidden=photo.hidden;
     document.getElementById("psince").textContent=document.getElementById("asince").textContent;
     document.getElementById("pdesc").textContent=INFO.description;
-    document.getElementById("pcall").textContent=INFO.phone?"Si vous la voyez : "+INFO.phone:"Si vous la voyez : appelez le 17";
+    document.getElementById("pcall").textContent=posterCall();
     window.print();
   },function(){btn.textContent="Pas de connexion, réessayez";});
 };
+
+// Affiche en image 1080 × 1350 (format des messageries), dessinée dans le navigateur
+function loadImage(src){return new Promise(function(ok,ko){var img=new Image();img.onload=function(){ok(img);};img.onerror=ko;img.src=src;});}
+function wrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
+  var words=String(text||"").split(/\s+/), line="", lines=0;
+  for(var i=0;i<words.length;i++){
+    var test=line?line+" "+words[i]:words[i];
+    if(ctx.measureText(test).width>maxWidth&&line){
+      if(++lines===maxLines){ctx.fillText(line+" …",x,y);return y+lineHeight;}
+      ctx.fillText(line,x,y); y+=lineHeight; line=words[i];
+    }else line=test;
+  }
+  if(line){ctx.fillText(line,x,y);y+=lineHeight;}
+  return y;
+}
+function drawPoster(){
+  var W=1080, H=1350, M=60, photo=document.getElementById("aphoto");
+  return Promise.all([qrDataUrl().then(loadImage),photo.hidden?null:loadImage(photo.src),document.fonts.load("800 80px Archivo")]).then(function(r){
+    var qr=r[0], img=r[1], c=document.createElement("canvas"); c.width=W; c.height=H;
+    var ctx=c.getContext("2d"); if("fontStretch" in ctx)ctx.fontStretch="condensed";
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle="#141414"; ctx.lineWidth=6; ctx.strokeRect(M/2,M/2,W-M,H-M);
+    ctx.fillStyle="#c8102e"; ctx.font="800 92px Archivo, sans-serif"; ctx.textBaseline="top";
+    var y=wrapText(ctx,posterTitle().toUpperCase(),M,M+10,W-2*M,96,2)+12;
+    var photoBottom=y;
+    if(img){
+      var boxH=560, k=Math.min((W-2*M)/img.width,boxH/img.height), w=img.width*k, h=img.height*k, x=(W-w)/2;
+      ctx.drawImage(img,x,y,w,h); ctx.strokeStyle="#141414"; ctx.lineWidth=4; ctx.strokeRect(x,y,w,h); photoBottom=y+h+24;
+    }
+    ctx.fillStyle="#141414"; ctx.font="600 34px Archivo, sans-serif";
+    y=wrapText(ctx,document.getElementById("asince").textContent,M,photoBottom,W-2*M,42,2)+8;
+    ctx.font="400 32px Archivo, sans-serif";
+    wrapText(ctx,INFO.description,M,y,W-2*M,40,img?3:8);
+    var bandTop=H-M/2-250;
+    ctx.fillStyle="#141414"; ctx.fillRect(M/2,bandTop-6,W-M,6);
+    ctx.drawImage(qr,W-M-210,bandTop+20,210,210);
+    ctx.fillStyle="#141414"; ctx.font="700 34px Archivo, sans-serif";
+    ctx.fillText("Si vous la voyez, appelez :",M,bandTop+26);
+    ctx.font="800 76px Archivo, sans-serif";
+    ctx.fillText(INFO.phone||"17",M,bandTop+68);
+    ctx.font="500 28px Archivo, sans-serif";
+    wrapText(ctx,"Pour aider à chercher, scannez le code : carte des secteurs et consignes.",M,bandTop+165,W-2*M-240,34,2);
+    return new Promise(function(ok){c.toBlob(ok,"image/png");});
+  });
+}
+document.getElementById("poster-img").onclick=function(){
+  var btn=this, label=btn.lastChild;
+  label.textContent="Préparation…";
+  drawPoster().then(function(blob){
+    label.textContent="Partager l'affiche (image)";
+    var file=new File([blob],"affiche-battue.png",{type:"image/png"});
+    if(navigator.canShare&&navigator.canShare({files:[file]}))return navigator.share({files:[file],text:posterTitle()}).catch(function(){});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
+  }).catch(function(){label.textContent="Pas de connexion, réessayez";});
+};
+
+// Alerte au coordinateur quand un binôme dépasse sa durée prévue : bandeau, vibration, notification.
+// ponytail: alerte tant que la page du coordinateur reste ouverte ; une vraie notification push (VAPID) si ça ne suffit pas.
+var swReg=null;
+function lateAlerts(){
+  var seen; try{seen=JSON.parse(ls("battue_late_"+SEARCH_ID)||"{}");}catch(e){seen={};}
+  Object.keys(sectorStatus).forEach(function(id){
+    var s=sectorStatus[id], key=id+":"+s.ds;
+    if(!cells[id]||!late(s)||seen[key])return;
+    seen[key]=1; ls("battue_late_"+SEARCH_ID,JSON.stringify(seen));
+    var text=id+" : "+(s.e||"binôme")+", toujours pas de retour (prévu "+since(Date.now()-s.p*60000)+")";
+    var toast=document.getElementById("toast");
+    toast.innerHTML=icon("clock")+'<span></span><button class="btn" type="button">Voir</button>';
+    toast.querySelector("span").textContent=text; toast.hidden=false;
+    toast.querySelector("button").onclick=function(){toast.hidden=true;map.fitBounds(cells[id].b,{padding:[30,30]});openCell(id);};
+    if(navigator.vibrate)navigator.vibrate([300,150,300]);
+    if(swReg&&window.Notification&&Notification.permission==="granted")swReg.showNotification("Battue · binôme en retard",{body:text,tag:"late-"+key,data:location.href});
+  });
+}
 
 // Accueil du bénévole à sa première visite : prénoms du binôme et consignes, puis son secteur s'il en a reçu un
 function welcome(){
@@ -613,6 +705,16 @@ function welcome(){
 
 // Coordinateur : liens, partage WhatsApp, clôture
 function setupCoordinator(){
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").then(function(r){swReg=r;}).catch(function(){});
+  var alertsMsg=document.getElementById("alertsmsg"), alertsBtn=document.getElementById("alerts");
+  if(!window.Notification){alertsBtn.hidden=true;alertsMsg.textContent="Ce navigateur ne permet pas les notifications : les retards s'affichent sur la carte.";}
+  else if(Notification.permission==="granted"){alertsBtn.hidden=true;alertsMsg.textContent="Alertes de retard activées sur ce téléphone, tant que cette page reste ouverte.";}
+  alertsBtn.onclick=function(){
+    Notification.requestPermission().then(function(p){
+      alertsMsg.textContent=p==="granted"?"Alertes de retard activées sur ce téléphone, tant que cette page reste ouverte.":"Notifications refusées : les retards s'afficheront seulement sur la carte.";
+      alertsBtn.hidden=p==="granted";
+    });
+  };
   var volLink=location.origin+location.pathname+"#v="+VOL;
   var coordLink=location.origin+location.pathname+"#c="+TOKEN;
   var dlg=document.getElementById("dinvite"), btn=document.getElementById("invite");

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Battue – admin</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-bottom:2.5rem}
+  th,td{padding:.6rem .4rem;border-bottom:1px solid #d8d8d3;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.9rem;border-bottom:2px solid var(--ink)}
+  td.warn{color:var(--grid);font-weight:800}
+  .status{display:flex;gap:.6rem;align-items:center;font-weight:700;margin:0 0 2rem}
+  .status i{width:14px;height:14px;border-radius:50%;background:var(--park-ink)}
+  .status.ko i{background:var(--grid)}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Battue</a>
+  <span class="msg" style="margin:0">Admin : compteurs seulement, aucun contenu de battue</span>
+</header>
+<main class="form-page" style="max-width:52rem">
+  <h1>Suivi</h1>
+  <p id="msg" class="msg" role="status">Chargement…</p>
+  <div id="out"></div>
+</main>
+<script>
+// Jeton admin dans la partie # du lien (/admin#t=…), gardé sur cet appareil
+var hash=new URLSearchParams(location.hash.slice(1)), TOKEN=hash.get("t");
+try{if(TOKEN)localStorage.setItem("battue_admin",TOKEN);else TOKEN=localStorage.getItem("battue_admin");}catch(e){}
+if(hash.has("t"))history.replaceState(null,"",location.pathname);
+var msg=document.getElementById("msg");
+var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Battues clôturées"],["expire","Battues effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["selftest-ko","Tests automatiques en échec"]];
+function when(t){return t?new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"jamais";}
+if(!TOKEN){msg.textContent="Lien incomplet : ouvrez /admin#t=<jeton admin>.";msg.className="msg err";}
+else fetch("/api/admin/stats",{headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){return r.json().then(function(j){
+  if(!r.ok)throw new Error(r.status===403?"Jeton admin refusé.":j.error||"Erreur "+r.status);return j;});
+}).then(function(j){
+  var periods=Object.keys(j.periods), ok=j.selftest["selftest-ok"]||0, ko=j.selftest["selftest-ko"]||0, healthy=ok>ko&&Date.now()-ok<2*3600e3;
+  var html='<p class="status'+(healthy?'':' ko')+'"><i></i>Test automatique : '+(healthy?"OK, dernier passage "+when(ok):"en échec ou absent depuis "+when(Math.max(ok,ko)))+'</p>';
+  html+='<table><thead><tr><th>Événement</th>'+periods.map(function(p){return "<th>"+p+"</th>";}).join("")+'</tr></thead><tbody>';
+  html+=ROWS.map(function(row){return '<tr><td>'+row[1]+'</td>'+periods.map(function(p){var n=j.periods[p][row[0]]||0;return '<td'+((row[0]==="selftest-ko"||row[0]==="no-volunteer")&&n?' class="warn"':'')+'>'+n+'</td>';}).join("")+'</tr>';}).join("");
+  html+='</tbody></table>';
+  var month=j.periods["30 jours"], open=(month.create||0)-(month.close||0)-(month.expire||0);
+  html+='<p>Battues probablement encore ouvertes (créées moins clôturées sur 30 jours)&nbsp;: <b>'+Math.max(0,open)+'</b></p>';
+  document.getElementById("out").innerHTML=html; msg.textContent="";
+}).catch(function(err){msg.textContent=err.message==="Failed to fetch"?"Pas de connexion.":err.message;msg.className="msg err";});
+</script>
+</body>
+</html>

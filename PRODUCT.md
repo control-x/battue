@@ -30,7 +30,7 @@ Zéro installation, zéro compte : une page web, deux liens (coordinateur, bén�
 
 ## Brand Commitments
 - Nom définitif : **Battue**, domaine battue.org. Aucun logo ni élément visuel existant.
-- Signé par Damien Cirotteau, à titre personnel.
+- Signé par Damien Cirotteau, à titre personnel ; la mention « créé après la recherche d'un proche » est validée (sans nommer Hélène).
 - Ton : calme et direct. Phrases courtes, vouvoiement, rassurant sans être mielleux ; l'urgence sans la panique.
 
 ## Evidence on Hand

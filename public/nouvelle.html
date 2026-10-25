@@ -14,6 +14,7 @@
   <label>Prénom de la personne<input name="name" autocomplete="off"></label>
   <label>Dernier lieu où elle a été vue *<input name="address" list="addrs" required autocomplete="off" placeholder="Adresse, ville"></label>
   <datalist id="addrs"></datalist>
+  <button id="here" class="secondary" type="button">📍 Je suis sur place : utiliser ma position</button>
   <label>Vue pour la dernière fois le<input name="since" type="datetime-local"></label>
   <label>Photo récente<input name="photo" type="file" accept="image/*"></label>
   <label>Description et tenue<textarea name="description" rows="4" placeholder="Âge, taille, cheveux, vêtements, habitudes…"></textarea></label>
@@ -48,9 +49,24 @@ function shrink(file){
     return c.toDataURL("image/jpeg",.75);
   });
 }
+// Sur place : la position exacte du téléphone, avec l'adresse la plus proche pour l'affichage
+document.getElementById("here").onclick=function(){
+  if(!navigator.geolocation)return say("Position indisponible sur cet appareil.");
+  say("Recherche de votre position…");
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude, lng=pos.coords.longitude;
+    fetch("https://api-adresse.data.gouv.fr/reverse/?lat="+lat+"&lon="+lng).then(function(r){return r.json();}).then(function(j){
+      var f=j.features&&j.features[0]; return f&&"Près de "+f.properties.label;
+    }).catch(function(){}).then(function(label){
+      label=label||"Position "+lat.toFixed(5)+", "+lng.toFixed(5);
+      found[label]={properties:{label:label},geometry:{coordinates:[lng,lat]}};
+      form.address.value=label; say("");
+    });
+  },function(){say("Position refusée : autorisez la localisation, ou saisissez l'adresse.");},{enableHighAccuracy:true,timeout:15000});
+};
 form.onsubmit=function(e){
   e.preventDefault();
-  var q=form.address.value.trim(), btn=form.querySelector("button");
+  var q=form.address.value.trim(), btn=form.querySelector("button[type=submit]");
   btn.disabled=true; say("Création…");
   Promise.all([found[q]?[found[q]]:geocode(q,1),shrink(form.photo.files[0])]).then(function(r){
     var f=r[0][0]; if(!f)throw new Error("Adresse introuvable, précisez la ville.");

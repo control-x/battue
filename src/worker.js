@@ -29,6 +29,7 @@ const randomToken = () => btoa(String.fromCharCode(...crypto.getRandomValues(new
 const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 const randomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
 const IDLE_MS = 30 * 24 * 3600 * 1000;
+const NO_VOLUNTEER_MS = 30 * 60 * 1000;
 const GONE = { error: "Recherche introuvable ou clôturée" };
 // Compteurs admin : un nom d'événement, jamais de contenu
 const stat = (env, event, test) => env.STATS?.writeDataPoint({ blobs: [event, test ? "test" : "réel"], indexes: [event] });
@@ -47,6 +48,20 @@ export class Search extends DurableObject {
     });
   }
 
+  // Premier passage d'un bénévole : l'invitation fonctionne, pas d'alerte « aucun bénévole »
+  async noteVolunteer(role) {
+    if (role !== "vol" || this.meta.volunteerSeen) return;
+    this.meta.volunteerSeen = true;
+    await this.ctx.storage.put("meta", this.meta);
+  }
+
+  // Une seule alarme par objet : la plus proche entre l'alerte « aucun bénévole » et l'effacement après 30 jours
+  scheduleAlarm() {
+    const due = [this.state.t + IDLE_MS];
+    if (!this.meta.volunteerSeen && !this.meta.alerted) due.push(this.meta.info.created + NO_VOLUNTEER_MS);
+    return this.ctx.storage.setAlarm(Math.min(...due));
+  }
+
   roleOf(token) {
     if (!this.meta || !token) return null;
     return token === this.meta.coord ? "coord" : token === this.meta.vol ? "vol" : null;
@@ -61,8 +76,9 @@ export class Search extends DurableObject {
   }
 
   async save(event) {
+    this.state.t = Date.now();
     await this.ctx.storage.put("state", this.state);
-    await this.ctx.storage.setAlarm(Date.now() + IDLE_MS);
+    await this.scheduleAlarm();
     stat(this.env, event, this.meta.info.test);
     const msg = JSON.stringify(this.publicState());
     for (const ws of this.ctx.getWebSockets()) {
@@ -79,8 +95,16 @@ export class Search extends DurableObject {
     this.state = { secteurs: {}, points: {} };
   }
 
-  alarm() {
-    return this.wipe("expire");
+  async alarm() {
+    if (!this.meta) return;
+    if (Date.now() >= this.state.t + IDLE_MS) return this.wipe("expire");
+    if (!this.meta.volunteerSeen && !this.meta.alerted) {
+      this.meta.alerted = true;
+      await this.ctx.storage.put("meta", this.meta);
+      stat(this.env, "no-volunteer", this.meta.info.test);
+      if (!this.meta.info.test) await notify(this.env, "Battue : une recherche n'a aucun bénévole 30 minutes après sa création");
+    }
+    await this.scheduleAlarm();
   }
 
   async fetch(req) {
@@ -107,6 +131,7 @@ export class Search extends DurableObject {
 
     const role = this.roleOf((req.headers.get("Authorization") || "").replace(/^Bearer /, ""));
     if (!role) return json({ error: "lien" }, 403);
+    await this.noteVolunteer(role);
     const isAdmin = role === "coord";
 
     if (req.method === "GET" && url.pathname === "/state") return json({ role, ...this.publicState(), ...(isAdmin && { vol: this.meta.vol }) });
@@ -179,11 +204,12 @@ export class Search extends DurableObject {
   }
 
   // "auth <jeton>" ouvre la diffusion ; "ping" garde la connexion ouverte
-  webSocketMessage(ws, msg) {
+  async webSocketMessage(ws, msg) {
     if (msg === "ping") return ws.send("pong");
     if (typeof msg === "string" && msg.startsWith("auth ")) {
       const role = this.roleOf(msg.slice(5));
       if (!role) return ws.close(4003, "lien");
+      await this.noteVolunteer(role);
       ws.serializeAttachment({ role });
       ws.send(JSON.stringify({ role, ...this.publicState(), ...(role === "coord" && { vol: this.meta.vol }) }));
     }

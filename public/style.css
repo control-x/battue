@@ -9,12 +9,16 @@
   --ink-2:#424242;
   --grid:#c8102e;
   --grid-soft:rgba(200,16,46,.28);
-  --street:#f2a38a;
+  --grid-deep:#a50d26;
   --road:#f5c842;
-  --water:#7fb8e2;
-  --park:#b9dc9f;
   --park-ink:#2c7a3a;
+  --park-deep:#1f5c2a;
   --wa:#1d7f45;
+  --wa-deep:#166637;
+  --ink-soft:#333333;
+  --sheet-hover:#efefea;
+  --hairline:#d8d8d3;
+  --dots:#8f8f89;
   --focus:#1f5fbf;
   --cell:64px;
   --margin:28px;
@@ -40,11 +44,11 @@ h2{font:800 1.9rem/1.05 Archivo,system-ui,sans-serif;font-stretch:70%;text-trans
 /* Boutons : étiquettes de plan, filet noir */
 .btn,button{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:.6em 1.1em;font:700 1.05rem/1.1 Archivo,system-ui,sans-serif;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;color:var(--ink);background:var(--sheet);border:2px solid var(--ink);border-radius:3px;cursor:pointer;text-decoration:none;transition:background-color .15s ease-out,transform .15s ease-out}
 .btn:active,button:active{transform:translateY(1px)}
-.btn:hover,button:hover{background:#efefea}
+.btn:hover,button:hover{background:var(--sheet-hover)}
 .btn-primary{background:var(--grid);border-color:var(--grid);color:#fff}
-.btn-primary:hover{background:#a50d26}
+.btn-primary:hover{background:var(--grid-deep)}
 .btn-wa{background:var(--wa);border-color:var(--wa);color:#fff}
-.btn-wa:hover{background:#166637}
+.btn-wa:hover{background:var(--wa-deep)}
 .btn-block{display:flex;width:100%}
 .btn-big{min-height:58px;font-size:1.25rem}
 button:disabled{opacity:.55;cursor:progress}
@@ -91,9 +95,9 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 .plan-demo{position:absolute;inset:var(--margin);overflow:hidden}
 .plan-demo .cell{position:absolute;width:var(--cell);height:var(--cell);left:calc(var(--c) * var(--cell));top:calc(var(--r) * var(--cell))}
 .cell.done{background:repeating-linear-gradient(45deg,rgba(44,122,58,.9) 0 3px,transparent 3px 9px)}
-.cell.doing{background:rgba(245,200,66,.85)}
+.cell.doing{background:rgba(245,200,66,.62)}
 .cell.prio{box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 6px rgba(255,255,255,.7),inset 0 0 0 7.5px var(--ink)}
-.plan-demo .ring{position:absolute;left:calc(var(--sc) * var(--cell));top:calc(var(--sr) * var(--cell));width:calc(var(--d) * var(--cell));height:calc(var(--d) * var(--cell));border:2px dashed rgba(20,20,20,.6);border-radius:50%;transform:translate(-50%,-50%)}
+.plan-demo .ring{position:absolute;left:calc(var(--sc) * var(--cell));top:calc(var(--sr) * var(--cell));width:calc(var(--d) * var(--cell));height:calc(var(--d) * var(--cell));border:1.5px dashed rgba(20,20,20,.55);border-radius:50%;transform:translate(-50%,-50%)}
 .plan-demo .start{position:absolute;left:calc(var(--sc) * var(--cell));top:calc(var(--sr) * var(--cell));width:20px;height:20px;border-radius:50%;background:var(--grid);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);transform:translate(-50%,-50%)}
 .plan-demo .tag{position:absolute;background:var(--sheet);border:1.5px solid var(--ink);padding:.15rem .45rem;font:700 .85rem/1.25 Archivo,system-ui,sans-serif;font-stretch:80%;white-space:nowrap;box-shadow:0 2px 6px rgba(20,20,20,.15)}
 .plan-top{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:12px}
@@ -104,7 +108,7 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 .hero-card .lead{margin:0;font-size:1.1rem;line-height:1.4}
 .hero-card .msg{margin-top:.4rem}
 .hero-card form label{margin-bottom:.75rem}
-.synthetic{position:absolute;right:calc(var(--margin) + 8px);top:calc(var(--margin) + 64px);margin:0;z-index:1;font-size:.8rem;color:var(--ink-2);background:rgba(255,255,255,.85);padding:0 .3rem}
+.synthetic{position:absolute;right:calc(var(--margin) + 8px);top:calc(var(--margin) + 84px);margin:0;z-index:1;font-size:.8rem;color:var(--ink-2);background:rgba(255,255,255,.85);padding:0 .3rem}
 
 .page{max-width:44rem;margin:0 auto;padding:4rem 1.25rem 3rem}
 .page section+section{margin-top:4rem}
@@ -112,9 +116,9 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 
 /* Index : comme l'index des rues au dos du plan */
 .index{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
-.index li{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:.5rem;padding:1rem 0;border-bottom:1px solid #cfcfca}
+.index li{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:.5rem;padding:1rem 0;border-bottom:1px solid var(--hairline)}
 .index b{font-size:1.2rem;font-stretch:85%}
-.index .dots{border-bottom:2px dotted #8f8f89;transform:translateY(-.3em)}
+.index .dots{border-bottom:2px dotted var(--dots);transform:translateY(-.3em)}
 .index .ref{font-weight:800;font-stretch:80%;color:var(--grid);text-transform:uppercase;font-variant-numeric:tabular-nums}
 .index p{grid-column:1/-1;margin:.25rem 0 0;color:var(--ink-2)}
 

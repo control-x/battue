@@ -23,7 +23,7 @@
   .tool .i{width:24px;height:24px}
   .tool:hover{background:var(--paper);border-color:var(--ink)}
   .tool-primary{background:var(--grid);color:#fff;border-color:var(--grid)}
-  .tool-primary:hover{background:#a50d26;border-color:#a50d26}
+  .tool-primary:hover{background:var(--grid-deep);border-color:var(--grid-deep)}
   .tool[hidden]{display:none}
 
   #mapwrap{position:absolute;left:0;right:0;bottom:0;top:calc(68px + env(safe-area-inset-top,0px))}
@@ -61,8 +61,8 @@
   #sum[hidden]{display:none}
   #sum .late{color:var(--grid)}
   #list{max-height:34vh;overflow:auto;margin:.4rem 0;border-top:2px solid var(--ink)}
-  #list div{padding:.45rem 0;border-bottom:1px solid #d8d8d3;cursor:pointer}
-  .keys{display:flex;flex-wrap:wrap;gap:.15rem .7rem;margin-top:.4rem;padding-top:.4rem;border-top:1px solid #d8d8d3;font-size:.82rem;font-weight:700;font-stretch:88%}
+  #list div{padding:.45rem 0;border-bottom:1px solid var(--hairline);cursor:pointer}
+  .keys{display:flex;flex-wrap:wrap;gap:.15rem .7rem;margin-top:.4rem;padding-top:.4rem;border-top:1px solid var(--hairline);font-size:.82rem;font-weight:700;font-stretch:88%}
   .keys span{display:inline-flex;align-items:center;gap:.3rem}
   .sos{display:flex;align-items:center;gap:.4rem;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.85rem;margin-bottom:.3rem}
   .sos #maj{margin:0 0 0 auto;text-transform:none;letter-spacing:0;font-weight:600}
@@ -87,11 +87,12 @@
   .leaflet-popup-content-wrapper{border-radius:3px;border:2px solid var(--ink);box-shadow:var(--shadow);padding:0}
   .leaflet-popup-tip{border:2px solid var(--ink);box-shadow:none}
   .leaflet-popup-content{margin:14px 16px;font:400 1rem/1.4 Archivo,system-ui,sans-serif;min-width:230px}
-  .leaflet-container a.leaflet-popup-close-button{width:32px;height:32px;font:400 24px/30px Archivo,sans-serif;color:var(--ink)}
+  .leaflet-container a.leaflet-popup-close-button{width:32px;height:32px;color:transparent;overflow:hidden}
+  .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:8px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
   .pop h3{font:800 1.5rem/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .pop h3 .prio{font-size:.8rem;letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
   .pop .state{margin:.2rem 0 .5rem}
-  .pop .links{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0 .75rem;padding:.6rem 0;border-top:1px solid #d8d8d3;border-bottom:1px solid #d8d8d3}
+  .pop .links{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0 .75rem;padding:.6rem 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
   .pop .links a{display:inline-flex;align-items:center;gap:.4rem;font-weight:700}
   .pop .links .i{width:18px;height:18px;color:var(--grid)}
   .pop label{font-size:.95rem;margin:0 0 .6rem}
@@ -101,9 +102,9 @@
   .pop .row label{flex:1}
   .pop button{width:100%;margin:.15rem 0}
   .btn-go{background:var(--ink);border-color:var(--ink);color:#fff}
-  .btn-go:hover{background:#333}
+  .btn-go:hover{background:var(--ink-soft)}
   .btn-done{background:var(--park-ink);border-color:var(--park-ink);color:#fff}
-  .btn-done:hover{background:#1f5c2a}
+  .btn-done:hover{background:var(--park-deep)}
   .btn-quiet{background:var(--paper)}
   .pop details{margin-top:.6rem;font-size:.95rem}
   .pop summary{cursor:pointer;font-weight:700;padding:.65rem 0}
@@ -120,7 +121,7 @@
   dialog p{margin:.4rem 0}
   dialog .desc{white-space:pre-wrap}
   dialog .btn{width:100%;margin:.3rem 0}
-  dialog hr{border:0;border-top:1px solid #d8d8d3;margin:1rem 0}
+  dialog hr{border:0;border-top:1px solid var(--hairline);margin:1rem 0}
   dialog form[method=dialog] .btn{margin-top:.75rem}
   .rules{padding-left:1.3rem;margin:.5rem 0 1rem}
   .rules li{margin:.4rem 0;padding-left:.2rem}
@@ -141,7 +142,8 @@
   #gone .brand{margin-bottom:1rem}
 
   .leaflet-control-zoom{border:2px solid var(--ink)!important;border-radius:3px!important;box-shadow:var(--shadow)!important}
-  .leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:38px!important;color:var(--ink)!important;font:700 22px/38px Archivo,sans-serif!important}
+  .leaflet-control-zoom a{width:40px!important;height:40px!important;display:flex!important;align-items:center;justify-content:center;color:var(--ink)!important}
+  .leaflet-control-zoom .i{width:20px;height:20px}
   .leaflet-control-attribution{font:11px Archivo,sans-serif}
   .leaflet-top.leaflet-right{top:24px}
   @media (max-width:639px){.leaflet-control-zoom{display:none}}
@@ -171,7 +173,7 @@
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <pattern id="hatch-done" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="9" height="9" fill="rgba(255,255,255,.35)"/><rect width="3.2" height="9" fill="#2c7a3a"/></pattern>
+    <pattern id="hatch-done" patternUnits="userSpaceOnUse" width="9" height="9" patternTransform="rotate(45)"><rect width="9" height="9" fill="rgba(255,255,255,.35)"/><rect width="3.2" height="9" style="fill:var(--park-ink)"/></pattern>
   </defs>
 </svg>
 <header class="appbar">
@@ -217,7 +219,7 @@
   <p id="asince"></p>
   <p id="adesc" class="desc"></p>
   <p id="aphone"></p>
-  <p class="dlabel">Consignes</p>
+  <h3 class="dlabel">Consignes</h3>
   <ol class="rules">
     <li>Regardez sans appeler son nom&nbsp;: une personne désorientée peut se cacher ou ne pas répondre.</li>
     <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
@@ -253,7 +255,7 @@
   <h2>Merci de nous aider</h2>
   <label>Votre prénom<input id="wwho" autocomplete="given-name"></label>
   <label>Prénom de votre binôme<span class="hint">Évitez de chercher seul.</span><input id="wpair"></label>
-  <p class="dlabel">Les consignes</p>
+  <h3 class="dlabel">Les consignes</h3>
   <ol class="rules">
     <li>Regardez sans appeler son nom&nbsp;: une personne désorientée peut se cacher ou ne pas répondre.</li>
     <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
@@ -284,7 +286,7 @@
     <label class="check"><input type="radio" name="outcome" value="found"> Oui</label>
     <label class="check"><input type="radio" name="outcome" value="not-found"> Non</label>
     <div id="foundby" hidden>
-      <p class="dlabel" style="margin-top:.6rem">Grâce à la battue&nbsp;?</p>
+      <h3 class="dlabel" style="margin-top:.6rem">Grâce à la battue&nbsp;?</h3>
       <p class="msg" style="margin:-.1rem 0 .4rem">Retrouvée par quelqu'un qui cherchait, ou qui avait été prévenu.</p>
       <label class="check"><input type="radio" name="foundby" value="yes"> Oui</label>
       <label class="check"><input type="radio" name="foundby" value="no"> Non</label>
@@ -306,8 +308,9 @@ var TILES_ATTRIB='&copy; <a href="https://www.openstreetmap.org/copyright">OpenS
 var CELL_M=500, GRID=13, MAX_M=3000, PRIORITY_M=500, RINGS_M=[500,1000,1600,3000];
 var COLS="ABCDEFGHIJKLM";
 // Le plan : carroyage rouge, en cours = aplat jaune, fait = hachure verte, signalement = rouge ; prioritaire = filet noir épais
-var INK="#141414", GRID_RED="#c8102e", FOCUS="#1f5fbf";
-var FILLS={todo:{fillOpacity:0},doing:{fillColor:"#f5c842",fillOpacity:.62},done:{fillColor:"url(#hatch-done)",fillOpacity:1},alert:{fillColor:GRID_RED,fillOpacity:.42}};
+var css=getComputedStyle(document.documentElement), token=function(name){return css.getPropertyValue("--"+name).trim();};
+var INK=token("ink"), GRID_RED=token("grid"), FOCUS=token("focus");
+var FILLS={todo:{fillOpacity:0},doing:{fillColor:token("road"),fillOpacity:.62},done:{fillColor:"url(#hatch-done)",fillOpacity:1},alert:{fillColor:GRID_RED,fillOpacity:.42}};
 function icon(name){return '<svg class="i" aria-hidden="true"><use href="/icons.svg#i-'+name+'"/></svg>';}
 var LABELS={todo:"À faire",doing:"En cours",done:"Fait",alert:"Signalement / à refaire"};
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
@@ -342,7 +345,7 @@ function showGone(msg){document.getElementById("gonemsg").textContent=msg;docume
 if(!TOKEN)showGone("Lien incomplet : demandez le lien de la battue au coordinateur.");
 
 var map=L.map("map",{zoomControl:false,zoomSnap:0.25}).setView([46.6,2.4],6);
-L.control.zoom({position:"topright"}).addTo(map);
+L.control.zoom({position:"topright",zoomInText:icon("plus"),zoomOutText:icon("minus")}).addTo(map);
 L.tileLayer(TILES,{maxZoom:19,attribution:TILES_ATTRIB}).addTo(map);
 
 var colCenters=[], rowCenters=[], cells={}, sectorStatus={}, pointsLayer=L.layerGroup().addTo(map), gridBounds=null, focusId=(new URLSearchParams(location.search).get("s")||"").toUpperCase();

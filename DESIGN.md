@@ -7,16 +7,21 @@ colors:
   grid-soft: "rgba(200,16,46,.28)"
   road: "#f5c842"
   park-ink: "#2c7a3a"
+  park-deep: "#1f5c2a"
   street: "#f2a38a"
   water: "#7fb8e2"
   park: "#b9dc9f"
   wa: "#1d7f45"
+  wa-deep: "#166637"
   focus: "#1f5fbf"
   ink: "#141414"
   ink-2: "#424242"
+  ink-soft: "#333333"
   paper: "#f8f9f7"
   sheet: "#ffffff"
   hairline: "#d8d8d3"
+  sheet-hover: "#efefea"
+  dots: "#8f8f89"
 typography:
   display:
     fontFamily: "Archivo, system-ui, sans-serif"
@@ -147,11 +152,11 @@ La palette est celle d'un plan imprimé : un rouge de carroyage, les teintes d'a
 
 ### Secondary
 - **Jaune grand axe** (`road`) : statut « en cours » (aplat), sélection de texte, un quart de la marque.
-- **Vert parc encre** (`park-ink`) : hachure du statut « fait », bouton « Terminé », pastille « En direct », lien vers son propre secteur.
+- **Vert parc encre** (`park-ink`) : hachure du statut « fait », bouton « Terminé », pastille « En direct », lien vers son propre secteur. Survol : **Vert parc foncé** (`park-deep`).
 
 ### Tertiary
-- **Saumon rue** (`street`), **Bleu eau** (`water`), **Vert parc** (`park`) : teintes du plan dessiné de l'accueil (`plan.svg`) ; réservées au fond cartographique, jamais à l'interface.
-- **Vert WhatsApp** (`wa`) : uniquement le bouton de partage vers WhatsApp.
+- **Saumon rue** (`street`), **Bleu eau** (`water`), **Vert parc** (`park`) : teintes du plan dessiné de l'accueil, écrites dans `plan.svg` (pas de variable CSS : une image de fond ne lit pas les variables de la page) ; réservées au fond cartographique, jamais à l'interface.
+- **Vert WhatsApp** (`wa`) : uniquement le bouton de partage vers WhatsApp. Survol : **Vert WhatsApp foncé** (`wa-deep`).
 - **Bleu repère** (`focus`) : anneau de focus clavier (3 px), carreau sélectionné sur la carte (trait 5 px), position « Moi ». Seul bleu du système, réservé à « ici et maintenant ».
 
 ### Neutral
@@ -159,7 +164,11 @@ La palette est celle d'un plan imprimé : un rouge de carroyage, les teintes d'a
 - **Encre seconde** (`ink-2`) : indications, messages, mentions de pied.
 - **Papier** (`paper`) : fond de page et de carte, boutons discrets.
 - **Feuille** (`sheet`) : cartouches, champs, boutons secondaires, barres hautes.
-- **Filet fin** (`hairline`) : séparateurs de listes et de fiches (1 px).
+- **Filet fin** (`hairline`) : séparateurs de listes et de fiches (1 px), partout le même gris.
+- **Pointillé** (`dots`) : points de conduite de l'index et bordure tiretée de l'ajout de lieu.
+- **Encre douce** (`ink-soft`) et **Feuille survolée** (`sheet-hover`) : survols du bouton noir et des boutons blancs.
+
+Les couleurs de la carte (carroyage, encre, repère, aplat « en cours », hachure « fait ») sont lues dans ces variables par le JavaScript : une seule source.
 
 ### Named Rules
 **La règle du rouge de carroyage.** Le rouge trace la grille, numérote la marge et porte l'action principale ou l'alerte ; il ne remplit jamais un fond de page ni un bandeau. Un écran rouge serait l'avis de recherche alarmiste que Battue refuse.

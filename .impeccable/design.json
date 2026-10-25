@@ -218,6 +218,31 @@
           "#f1f1f0",
           "#fafafa"
         ]
+      },
+      "park-deep": {
+        "role": "secondary",
+        "displayName": "Vert parc foncé",
+        "canonical": "#1f5c2a"
+      },
+      "wa-deep": {
+        "role": "tertiary",
+        "displayName": "Vert WhatsApp foncé",
+        "canonical": "#166637"
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Encre douce",
+        "canonical": "#333333"
+      },
+      "sheet-hover": {
+        "role": "neutral",
+        "displayName": "Feuille survolée",
+        "canonical": "#efefea"
+      },
+      "dots": {
+        "role": "neutral",
+        "displayName": "Pointillé",
+        "canonical": "#8f8f89"
       }
     },
     "typographyMeta": {

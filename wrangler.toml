@@ -1,0 +1,34 @@
+name = "battue"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+routes = [
+  { pattern = "battue.org", custom_domain = true },
+  { pattern = "www.battue.org", custom_domain = true },
+  { pattern = "app.battue.org", custom_domain = true },
+]
+
+# Le worker passe en premier : il route /api et /r/<code>, et sert le reste depuis public/
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+JURISDICTION = "eu"
+
+[[durable_objects.bindings]]
+name = "SEARCH"
+class_name = "Search"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Search"]
+
+# Compteurs admin (aucun contenu de recherche)
+[[analytics_engine_datasets]]
+binding = "STATS"
+dataset = "battue"
+
+# Test complet toutes les heures ; alerte ntfy si échec (secret NTFY_TOPIC)
+[triggers]
+crons = ["0 * * * *"]

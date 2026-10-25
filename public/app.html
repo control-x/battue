@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Battue – carte de recherche</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  html,body{height:100%;margin:0;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+  #map{position:absolute;inset:0}
+  .bar{position:absolute;z-index:1000;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+  .bar>*{pointer-events:auto}
+  .card{background:#fff;border-radius:8px;box-shadow:0 1px 6px rgba(0,0,0,.3);padding:6px 10px;font-size:14px}
+  button,a.btn{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 12px;background:#1f5f8b;color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.3);cursor:pointer;text-decoration:none;white-space:nowrap}
+  button.red{background:#c01818}
+  #sig{position:absolute;z-index:1000;right:10px;bottom:calc(110px + env(safe-area-inset-bottom,0px));padding:12px 14px;font-size:15px}
+  a.btn.wa,button.wa{background:#1f8f4e}
+  button.light{background:#fff;color:#c01818}
+  .pop .row{display:flex;gap:6px}
+  .pop .row label{flex:1;font-size:12px;color:#555}
+  .pop .row input{margin-top:2px}
+  .lbl{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;font:700 13px/1 ui-monospace,monospace;color:#123;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;white-space:nowrap;text-align:center}
+  .lbl small{display:block;font:600 10px system-ui;margin-top:2px}
+  #map.far .lbl small{display:none}
+  .legend{position:absolute;z-index:1000;left:8px;bottom:calc(20px + env(safe-area-inset-bottom,0px));font-size:12px;line-height:1.6}
+  .legend i{display:inline-block;width:12px;height:12px;border:1px solid #555;margin-right:5px;vertical-align:-2px}
+  .leaflet-popup-content{font-size:14px;min-width:220px}
+  .leaflet-popup-content a{font-weight:600}
+  .pop select,.pop input,.pop textarea,dialog input{font:16px system-ui;width:100%;box-sizing:border-box;margin:3px 0 6px;padding:6px;border:1px solid #bbb;border-radius:6px}
+  .pop textarea{min-height:50px}
+  .pop button{box-shadow:none;width:100%}
+  .msg{font-size:12px;color:#555;margin-top:4px}
+  .msg.err{color:#c01818;font-size:15px;font-weight:700}
+  .pop button.go{background:#1f8f4e;font-size:16px;padding:12px}
+  .pop button.stop{background:#c01818;font-size:16px;padding:12px}
+  .pop details{margin-top:8px;font-size:13px}
+  #fpast summary{color:#1f8f4e;font-size:14px;padding:6px 0}
+  .pop summary{color:#555;cursor:pointer}
+  .st{display:inline-block;padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}
+  #sum{cursor:pointer;font-weight:600;color:#1f5f8b}
+  #list{max-height:40vh;overflow:auto;margin:4px 0;border-top:1px solid #ddd}
+  #list div{padding:5px 0;border-bottom:1px solid #eee;cursor:pointer}
+  #info.mine{color:#1f8f4e;cursor:pointer;text-decoration:underline}
+  dialog{box-sizing:border-box;border:0;border-radius:10px;box-shadow:0 2px 20px rgba(0,0,0,.4);max-width:min(420px,calc(100vw - 32px));max-height:85vh;overflow:auto;padding:16px}
+  dialog img{max-width:100%;border-radius:6px}
+  dialog h2{margin:0 0 8px;font-size:18px}
+  dialog button{box-shadow:none;margin:4px 0;width:100%}
+  dialog .desc{white-space:pre-wrap}
+  #gone[hidden]{display:none}
+  #gone{position:absolute;inset:0;z-index:2000;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px}
+  @media (max-width:520px){
+    .bar{gap:5px;flex-wrap:nowrap;overflow-x:auto}
+    button,a.btn{padding:8px 9px;font-size:13px}
+    .long{display:none}
+    .legend{font-size:11px;line-height:1.4;padding:4px 8px;max-width:calc(100% - 80px);display:flex;flex-wrap:wrap;column-gap:10px}
+    .legend>#info,.legend>#maj,.legend>#sum,.legend>#list{flex-basis:100%}
+    .legend i{width:10px;height:10px;margin-right:3px}
+    .leaflet-popup-content{min-width:0;margin:10px 12px}
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="bar">
+  <button id="avis" class="light" type="button">🔎<span class="long"> Avis</span></button>
+  <a id="wa" class="btn wa" target="_blank" rel="noopener" hidden>💬<span class="long"> WhatsApp</span></a>
+  <a id="tel" class="btn" hidden>📞<span class="long"> Appeler</span></a>
+  <button id="loc" type="button">📍<span class="long"> Ma position</span></button>
+  <button id="home" type="button">🏠<span class="long"> Départ</span></button>
+  <button id="invite" type="button" hidden>📣<span class="long"> Inviter</span></button>
+</div>
+<button id="sig" class="red" type="button">⚠️ Signaler</button>
+<div class="legend card">
+  <div id="info" style="font-weight:600">Touchez un carré</div>
+  <div id="sum" hidden></div>
+  <div id="list" hidden></div>
+  <div><i style="background:rgba(255,255,255,.1);border:2px solid #e07b00"></i>Prioritaire</div>
+  <div><i style="background:rgba(255,255,255,.1)"></i>À faire</div>
+  <div><i style="background:#f3c64a"></i>En cours</div>
+  <div><i style="background:#4f9a6a"></i>Fait</div>
+  <div><i style="background:#d0453a"></i>Signalement</div>
+  <div id="maj" style="color:#666"></div>
+</div>
+<div id="gone" hidden></div>
+
+<dialog id="davis">
+  <h2 id="aname"></h2>
+  <img id="aphoto" alt="" hidden>
+  <p id="asince"></p>
+  <p id="adesc" class="desc"></p>
+  <p id="aphone"></p>
+  <p><b>Consignes :</b> regarder sans appeler son nom, fouiller buissons, fossés et berges, ne pas entrer chez les gens, jamais de berge seul ni la nuit.</p>
+  <form method="dialog"><button>Fermer</button></form>
+</dialog>
+
+<dialog id="dinvite">
+  <h2>Inviter les bénévoles</h2>
+  <button id="share" class="wa" type="button">💬 Partager sur WhatsApp</button>
+  <label>Lien bénévoles<input id="volLink" readonly></label>
+  <button id="cpVol" type="button">Copier le lien bénévoles</button>
+  <hr>
+  <label><b>Votre lien coordinateur</b> : gardez-le, ne le partagez pas<input id="coordLink" readonly></label>
+  <button id="cpCoord" type="button">Copier le lien coordinateur</button>
+  <hr>
+  <button id="close" class="red" type="button">Clôturer la recherche</button>
+  <div class="msg" id="closemsg">La clôture supprime toutes les données de la recherche.</div>
+  <form method="dialog"><button>Fermer</button></form>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+// Fond de carte : à changer ici pour basculer vers un autre fournisseur
+var TILES="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+var TILES_ATTRIB='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+// Grille : carrés de 500 m centrés sur le point de départ, jusqu'à 3 km ; le premier anneau est prioritaire
+var CELL_M=500, GRID=13, MAX_M=3000, PRIORITY_M=500, RINGS_M=[500,1000,1600,3000];
+var COLS="ABCDEFGHIJKLM";
+var COLORS={todo:null,doing:"#f3c64a",done:"#4f9a6a",alert:"#d0453a"};
+var LABELS={todo:"À faire",doing:"En cours",done:"Fait",alert:"Signalement / à refaire"};
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
+function nowHHMM(){var d=new Date();return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);}
+function since(ds){var m=Math.max(0,Math.round((Date.now()-ds)/60000));return m<60?m+" min":Math.floor(m/60)+" h "+("0"+m%60).slice(-2);}
+function hhmm(t){var d=new Date(t);return ("0"+d.getHours()).slice(-2)+"h"+("0"+d.getMinutes()).slice(-2);}
+function fmtSince(s){if(!s)return "";var d=new Date(s);return isNaN(d)?s:d.toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});}
+
+// Battue et jeton : /r/<code>#c=<jeton coordinateur> ou #v=<jeton bénévole> ; le jeton est gardé sur l'appareil
+var SEARCH_ID=location.pathname.split("/")[2];
+var API="/api/r/"+SEARCH_ID;
+var hash=new URLSearchParams(location.hash.slice(1));
+var TOKEN=hash.get("c")||hash.get("v")||ls("battue_"+SEARCH_ID);
+if(TOKEN)ls("battue_"+SEARCH_ID,TOKEN);
+var ROLE=null, INFO=null, VOL=null, justCreated=hash.has("new");
+if(justCreated)history.replaceState(null,"",location.pathname+"#"+(hash.get("c")?"c="+hash.get("c"):""));
+
+// Jeton de cet appareil : seul l'appareil qui a commencé un secteur peut le terminer
+var DEVICE=ls("rc_dev"); if(!DEVICE){DEVICE=Date.now().toString(36)+Math.random().toString(36).slice(2,10);ls("rc_dev",DEVICE);}
+function mine(){try{return JSON.parse(ls("rc_mine")||"{}");}catch(e){return {};}}
+function isMine(id){var s=sectorStatus[id];return !!(s&&s.s==="doing"&&s.ds&&mine()[id]===s.ds);}
+
+function showGone(msg){var g=document.getElementById("gone");g.textContent=msg;g.hidden=false;}
+if(!TOKEN)showGone("Lien incomplet : demandez le lien de la battue au coordinateur.");
+
+var map=L.map("map",{zoomControl:false,zoomSnap:0.25}).setView([46.6,2.4],6);
+L.control.zoom({position:"bottomright"}).addTo(map);
+L.tileLayer(TILES,{maxZoom:19,attribution:TILES_ATTRIB}).addTo(map);
+
+var cells={}, sectorStatus={}, pointsLayer=L.layerGroup().addTo(map), gridBounds=null, focusId=(new URLSearchParams(location.search).get("s")||"").toUpperCase();
+function buildGrid(lat,lng){
+  var dLat=CELL_M/111320, dLng=dLat/Math.cos(lat*Math.PI/180), half=(GRID-1)/2;
+  for(var c=0;c<GRID;c++)for(var r=0;r<GRID;r++){
+    // Distance du départ au point le plus proche du carré
+    var dx=Math.max(0,Math.abs(c-half)*CELL_M-CELL_M/2), dy=Math.max(0,Math.abs(r-half)*CELL_M-CELL_M/2), near=Math.hypot(dx,dy);
+    if(near>MAX_M)continue;
+    var n=lat+(half-r+.5)*dLat, w=lng+(c-half-.5)*dLng;
+    (function(id,b,prio){
+      var rect=L.rectangle(b,{color:prio?"#e07b00":"#1f5f8b",weight:2,fillOpacity:.05}).addTo(map);
+      var ctr=L.latLngBounds(b).getCenter();
+      var lbl=L.marker(ctr,{interactive:false,icon:L.divIcon({className:"",html:'<div class="lbl">'+id+'</div>',iconSize:[60,30],iconAnchor:[30,15]})}).addTo(map);
+      rect.on("click",function(){openCell(id);});
+      cells[id]={rect:rect,lbl:lbl,center:ctr,b:b,prio:prio};
+    })(COLS[c]+(r+1),[[n-dLat,w],[n,w+dLng]],near<=PRIORITY_M);
+  }
+  RINGS_M.forEach(function(m){L.circle([lat,lng],{radius:m,weight:1,color:"#555",dashArray:"4 6",fill:false,interactive:false}).addTo(map);});
+  gridBounds=L.latLng(lat,lng).toBounds(2*PRIORITY_M*3);
+  if(cells[focusId])map.fitBounds(cells[focusId].b,{padding:[30,30]});else map.fitBounds(gridBounds,{paddingTopLeft:[0,50]});
+  L.circleMarker([lat,lng],{radius:9,color:"#fff",weight:3,fillColor:"#c01818",fillOpacity:1}).addTo(map)
+    .bindPopup("<b>Point de départ</b><br>"+esc(INFO.address)+(INFO.since?"<br>Vu(e) "+esc(fmtSince(INFO.since)):""));
+}
+// Vue éloignée : seulement les numéros de secteur, les détails apparaissent en zoomant
+function zoomClass(){document.getElementById("map").classList.toggle("far",map.getZoom()<15);}
+map.on("zoomend",zoomClass); zoomClass();
+
+function apiError(msg,kind){var e=new Error(msg);e.kind=kind;return e;}
+function post(path,body){
+  return fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return {};}).then(function(j){
+      if(r.status===403&&j.error==="lien")throw apiError("Lien invalide : demandez le lien au coordinateur.","lien");
+      if(r.status===403&&j.error==="admin")throw apiError("Réservé au coordinateur.","admin");
+      if(r.status===404)showGone(j.error||"Recherche clôturée.");
+      if(!r.ok)throw new Error(j.error||("Erreur "+r.status));
+      return j;});},function(){throw new Error("Pas de connexion internet, réessayez.");});
+}
+
+function statusLine(s){
+  var k=s.s||"todo";
+  if(k==="doing")return '▶ En cours'+(s.e?' – '+esc(s.e):'')+(s.d?', depuis '+esc(s.d):'')+(s.ds?' ('+since(s.ds)+')':'');
+  if(k==="done")return '✓ Fait'+(s.e?' – '+esc(s.e):'')+(s.d||s.f?', '+esc(s.d||'?')+' → '+esc(s.f||'?'):'');
+  if(k==="alert")return '⚠️ Signalement / à refaire'+(s.e?' – '+esc(s.e):'');
+  return 'À faire';
+}
+function openCell(id,errMsg,errMsg2){
+  var s=sectorStatus[id]||{}, k=s.s||"todo", c=cells[id].center;
+  var gm="https://www.google.com/maps/dir/?api=1&destination="+c.lat.toFixed(5)+","+c.lng.toFixed(5)+"&travelmode=walking";
+  var link=location.origin+location.pathname+"?s="+id;
+  var html='<div class="pop"><b>Secteur '+id+'</b>'+(cells[id].prio?' · <b style="color:#a85a00">prioritaire</b>':'')+'<br><span class="st" style="background:'+(COLORS[k]||"#eee")+'">'+statusLine(s)+'</span>'+
+    (s.n?'<br>'+esc(s.n):'')+
+    '<br><a href="'+gm+'" target="_blank" rel="noopener">Itinéraire à pied</a> · <a href="#" id="cp">Copier le lien</a><hr>';
+  if(k==="doing"&&isMine(id)){
+    html+='<textarea id="fn" placeholder="Note : affiches posées, ce qui a été vu…">'+esc(s.n)+'</textarea>'+
+      '<button id="fstop" class="stop" type="button">■ Terminer la recherche</button>';
+  }else if(k==="doing"){
+    html+='<div class="msg">Seule la personne qui a commencé peut terminer ce secteur.</div>';
+  }else if(k==="done"){
+    html+='<div class="msg">Secteur terminé. Seul le coordinateur peut le rouvrir ou le modifier.</div>';
+  }else{
+    html+='<input id="fe" placeholder="Votre prénom" value="'+esc(ls("rc_who")||"")+'">'+
+      '<button id="fstart" class="go" type="button">▶ Commencer la recherche</button>'+
+      '<details id="fpast"><summary><b>✓ J\'ai déjà fait ce secteur</b></summary>'+
+      '<div class="row"><label>Début<input id="pd" type="time"></label>'+
+      '<label>Fin<input id="pf" type="time" value="'+nowHHMM()+'"></label></div>'+
+      '<textarea id="pn" placeholder="Note : affiches posées, ce qui a été vu…"></textarea>'+
+      '<button id="fpastsave" class="go" type="button">Enregistrer comme fait</button></details>';
+  }
+  html+='<div class="msg" id="fmsg"></div>';
+  if(ROLE==="coord")
+    html+='<details'+(errMsg2?' open':'')+'><summary>Correction (coordinateur)</summary><select id="fs">'+Object.keys(LABELS).map(function(x){return '<option value="'+x+'"'+(x===k?" selected":"")+'>'+LABELS[x]+'</option>';}).join("")+'</select>'+
+      '<input id="fe2" placeholder="Prénom" value="'+esc(s.e)+'">'+
+      '<div class="row"><label>Début<input id="fd" type="time" value="'+esc(s.d)+'"></label>'+
+      '<label>Fin<input id="ff" type="time" value="'+esc(s.f)+'"></label></div>'+
+      '<textarea id="fn2" placeholder="Note">'+esc(s.n)+'</textarea>'+
+      '<button id="fsave" type="button">Enregistrer la correction</button><div class="msg" id="fmsg2"></div></details>';
+  html+='</div>';
+  var popup=L.popup({maxWidth:Math.min(300,window.innerWidth-40),autoPanPaddingTopLeft:[10,70]}).setLatLng(c).setContent(html).openOn(map);
+  // L'ancienne fiche reste dans la page pendant son animation de fermeture :
+  // on cherche les éléments dans la nouvelle fiche, jamais avec document.getElementById
+  var root=popup.getElement();
+  function $(x){return root.querySelector("#"+x);}
+  var cp=$("cp");
+  cp.onclick=function(e){e.preventDefault();copy(link,cp,"Lien copié");};
+  // Messages affichés près du bouton utilisé
+  var m=$("fmsg"), m2=$("fmsg2");
+  function say(el,txt,isErr){el.textContent=txt;el.className=isErr?"msg err":"msg";}
+  if(errMsg)say(m,errMsg,true);
+  if(errMsg2)say(m2,errMsg2,true);
+  function saved(j){sectorStatus[id]=j.meta;paint();openCell(id);}
+  function failed(err){say(m,err.message,true);}
+  var bStart=$("fstart"), bStop=$("fstop"), bPast=$("fpastsave");
+  function firstName(){
+    var who=$("fe").value.trim();
+    if(!who){say(m,"Indiquez votre prénom.",true);return "";}
+    ls("rc_who",who); return who;
+  }
+  if(bPast)bPast.onclick=function(){
+    var who=firstName(); if(!who)return;
+    var d=$("pd").value, f=$("pf").value;
+    if(!d||!f){say(m,"Indiquez l'heure de début et de fin.",true);return;}
+    say(m,"Enregistrement…");
+    post("/sector/done",{id:id,e:who,d:d,f:f,n:$("pn").value}).then(saved).catch(failed);
+  };
+  if(bStart)bStart.onclick=function(){
+    var who=firstName(); if(!who)return;
+    say(m,"Enregistrement…");
+    post("/sector/start",{id:id,e:who,o:DEVICE}).then(function(j){
+      var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved(j);
+    }).catch(failed);
+  };
+  if(bStop)bStop.onclick=function(){
+    say(m,"Enregistrement…");
+    post("/sector/stop",{id:id,o:DEVICE,n:$("fn").value}).then(function(j){
+      var mm=mine(); delete mm[id]; ls("rc_mine",JSON.stringify(mm)); saved(j);
+    }).catch(failed);
+  };
+  if(ROLE!=="coord")return;
+  $("fs").onchange=function(){
+    var fd=$("fd"), ff=$("ff");
+    if((this.value==="doing"||this.value==="done")&&!fd.value)fd.value=nowHHMM();
+    if(this.value==="done"&&!ff.value)ff.value=nowHHMM();
+  };
+  $("fsave").onclick=function(){
+    say(m2,"Enregistrement…");
+    post("/sector",{id:id,s:$("fs").value,e:$("fe2").value,n:$("fn2").value,d:$("fd").value,f:$("ff").value})
+      .then(saved).catch(function(err){say(m2,err.message,true);});
+  };
+}
+function copy(text,el,done){
+  (navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(function(){el.textContent=done;},function(){el.textContent=text;});
+}
+// Résumé et liste des secteurs, mis à jour à chaque rafraîchissement
+var listOpen=window.innerWidth>520;
+function renderList(){
+  var ids=Object.keys(sectorStatus).filter(function(id){return cells[id]&&sectorStatus[id].s&&sectorStatus[id].s!=="todo";});
+  var rank={doing:0,alert:1,done:2};
+  ids.sort(function(a,b){return rank[sectorStatus[a].s]-rank[sectorStatus[b].s]||(sectorStatus[b].t||0)-(sectorStatus[a].t||0);});
+  var n={doing:0,done:0,alert:0}; ids.forEach(function(id){n[sectorStatus[id].s]++;});
+  var sum=document.getElementById("sum"), list=document.getElementById("list");
+  sum.hidden=!ids.length;
+  sum.textContent="▶ "+n.doing+" en cours · ✓ "+n.done+" faits"+(n.alert?" · ⚠️ "+n.alert:"")+(listOpen?" ▴":" ▾");
+  list.hidden=!listOpen||!ids.length;
+  list.innerHTML=ids.map(function(id){return '<div data-id="'+id+'"><b>'+id+'</b> '+statusLine(sectorStatus[id])+(isMine(id)?' <b>(vous)</b>':'')+'</div>';}).join("");
+  var info=document.getElementById("info"), myId=ids.filter(isMine)[0];
+  if(myId){info.textContent="▶ Vous êtes sur "+myId+" depuis "+sectorStatus[myId].d+" – terminer";info.className="mine";info.onclick=function(){map.fitBounds(cells[myId].b,{padding:[30,30]});openCell(myId);};}
+  else{info.className="";info.onclick=null;info.textContent=cells[focusId]?"Votre secteur : "+focusId:"Touchez un carré (orange : prioritaire)";}
+}
+document.getElementById("sum").onclick=function(){listOpen=!listOpen;renderList();};
+document.getElementById("list").onclick=function(e){
+  var row=e.target.closest("[data-id]"); if(!row)return;
+  var id=row.getAttribute("data-id"); map.fitBounds(cells[id].b,{padding:[30,30]}); openCell(id);
+};
+function paint(){
+  Object.keys(cells).forEach(function(id){
+    var s=sectorStatus[id]||{}, col=COLORS[s.s||"todo"], sel=(focusId===id), base=cells[id].prio?"#e07b00":"#1f5f8b";
+    cells[id].rect.setStyle({fillColor:col||base,fillOpacity:col?.55:.05,weight:sel?5:2,color:sel?"#c01818":base});
+    var sub=s.s==="doing"?"▶ "+esc(s.d||""):s.s==="done"?"✓ "+esc(s.d||"")+"–"+esc(s.f||""):"";
+    cells[id].lbl.setIcon(L.divIcon({className:"",html:'<div class="lbl">'+id+(sub?"<small>"+sub+"</small>":"")+(s.e&&s.s!=="todo"?"<small>"+esc(s.e)+"</small>":"")+"</div>",iconSize:[90,46],iconAnchor:[45,23]}));
+  });
+  renderList();
+}
+function drawPoints(points){
+  pointsLayer.clearLayers();
+  (points||[]).forEach(function(p){
+    var m=L.circleMarker([p.lat,p.lng],{radius:10,color:"#fff",weight:3,fillColor:"#ff7a00",fillOpacity:1}).addTo(pointsLayer);
+    m.bindPopup('<div class="pop"><b>⚠️ Signalement '+hhmm(p.t)+'</b>'+(p.who?' – '+esc(p.who):'')+'<br>'+esc(p.txt)+
+      '<br><button type="button" data-del="'+esc(p.id)+'" style="margin-top:8px;background:#666">Retirer (traité)</button></div>');
+  });
+}
+map.on("popupopen",function(e){
+  var b=e.popup.getElement().querySelector("[data-del]");
+  if(b)b.onclick=function(){post("/point/delete",{id:b.getAttribute("data-del")}).then(function(){map.closePopup();load();}).catch(function(err){b.textContent=err.message;});};
+});
+
+// Premier état reçu : on découvre la battue (rôle, point de départ, avis) et on construit la carte
+function setup(){
+  document.title="Battue – "+(INFO.name||INFO.address);
+  if(INFO.whatsapp){var wa=document.getElementById("wa");wa.href=INFO.whatsapp;wa.hidden=false;}
+  if(INFO.phone){var tel=document.getElementById("tel");tel.href="tel:"+INFO.phone.replace(/ /g,"");tel.hidden=false;}
+  document.getElementById("aname").textContent=INFO.name?"Avez-vous vu "+INFO.name+" ?":"Avis de recherche";
+  document.getElementById("asince").textContent=INFO.since?"Vu(e) pour la dernière fois "+fmtSince(INFO.since)+", "+INFO.address:"Dernier lieu connu : "+INFO.address;
+  document.getElementById("adesc").textContent=INFO.description;
+  document.getElementById("aphone").textContent=INFO.phone?"Si vous la ou le voyez, appelez le "+INFO.phone+".":"";
+  if(INFO.hasPhoto)fetch(API+"/photo",{headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){return r.json();}).then(function(j){
+    var img=document.getElementById("aphoto");img.src=j.photo;img.hidden=!j.photo;
+  }).catch(function(){});
+  if(ROLE==="coord")setupCoordinator();
+  buildGrid(INFO.lat,INFO.lng);
+}
+function applyState(j){
+  if(!INFO){ROLE=j.role;INFO=j.info;VOL=j.vol;setup();}
+  sectorStatus=j.secteurs||{}; drawPoints(j.points); paint();
+}
+function load(){
+  if(!TOKEN)return;
+  fetch(API+"/state",{cache:"no-store",headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){
+    if(r.status===404)return r.json().then(function(j){showGone(j.error);});
+    if(r.status===403){ls("battue_"+SEARCH_ID,"");return showGone("Lien invalide : demandez le lien de la battue au coordinateur.");}
+    return r.json().then(function(j){
+      applyState(j);
+      if(!wsLive)document.getElementById("maj").textContent="Mis à jour "+hhmm(Date.now());
+    });
+  }).catch(function(){document.getElementById("maj").textContent="Hors connexion";});
+}
+
+// Websocket : le worker pousse l'état à chaque changement ; sinon on retombe sur le rafraîchissement périodique
+var ws=null, wsLive=false;
+function connectWs(){
+  if(!TOKEN||(ws&&ws.readyState<2))return;
+  ws=new WebSocket(location.origin.replace(/^http/,"ws")+API+"/ws");
+  ws.onopen=function(){ws.send("auth "+TOKEN);wsLive=true;document.getElementById("maj").textContent="● En direct";};
+  ws.onmessage=function(e){if(e.data!=="pong")applyState(JSON.parse(e.data));};
+  ws.onclose=function(e){
+    wsLive=false;
+    if(e.code===4004)return showGone("La recherche a été clôturée. Merci à tous.");
+    if(e.code===4003)return;
+    document.getElementById("maj").textContent="Reconnexion…";
+    setTimeout(connectWs,3000);
+  };
+}
+setInterval(function(){if(ws&&ws.readyState===1)ws.send("ping");},25000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden){connectWs();if(!wsLive)load();}});
+
+load(); connectWs();
+setInterval(function(){if(!wsLive)load();},10000);
+setInterval(renderList,60000); // durées « depuis … »
+
+document.getElementById("home").onclick=function(){if(INFO)map.setView([INFO.lat,INFO.lng],17);};
+document.getElementById("avis").onclick=function(){document.getElementById("davis").showModal();};
+
+// Coordinateur : liens, partage WhatsApp, clôture
+function setupCoordinator(){
+  var volLink=location.origin+location.pathname+"#v="+VOL;
+  var coordLink=location.origin+location.pathname+"#c="+TOKEN;
+  var dlg=document.getElementById("dinvite"), btn=document.getElementById("invite");
+  btn.hidden=false; btn.onclick=function(){dlg.showModal();};
+  document.getElementById("volLink").value=volLink;
+  document.getElementById("coordLink").value=coordLink;
+  document.getElementById("cpVol").onclick=function(){copy(volLink,this,"Lien bénévoles copié");};
+  document.getElementById("cpCoord").onclick=function(){copy(coordLink,this,"Lien coordinateur copié");};
+  var text=(INFO.name?"🔎 Battue pour retrouver "+INFO.name:"🔎 Battue")+"\n"+
+    (INFO.since?"Vu(e) pour la dernière fois "+fmtSince(INFO.since)+", "+INFO.address:"Dernier lieu connu : "+INFO.address)+"\n"+
+    (INFO.description?INFO.description+"\n":"")+
+    (INFO.phone?"Si vous la ou le voyez : appelez le "+INFO.phone+"\n":"")+
+    "\nRejoignez la recherche, choisissez un secteur sur la carte :\n"+volLink+"\n\n"+
+    "Consignes : regarder sans appeler son nom, fouiller buissons, fossés et berges, ne pas entrer chez les gens, jamais de berge seul ni la nuit.";
+  document.getElementById("share").onclick=function(){
+    // Sur téléphone, le partage natif joint la photo ; sinon on ouvre WhatsApp avec le texte seul
+    var img=document.getElementById("aphoto");
+    var wa=function(){window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener");};
+    if(!img.src||!navigator.canShare)return wa();
+    fetch(img.src).then(function(r){return r.blob();}).then(function(blob){
+      var data={text:text,files:[new File([blob],"avis.jpg",{type:"image/jpeg"})]};
+      if(!navigator.canShare(data))return wa();
+      return navigator.share(data).catch(function(){});
+    }).catch(wa);
+  };
+  var closeBtn=document.getElementById("close"), armed=false;
+  closeBtn.onclick=function(){
+    if(!armed){armed=true;closeBtn.textContent="Confirmer : tout supprimer";return;}
+    post("/close",{}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
+      .catch(function(err){document.getElementById("closemsg").textContent=err.message;});
+  };
+  if(justCreated)dlg.showModal();
+}
+
+// Position du bénévole (reste sur le téléphone)
+var me=null, meAcc=null, first=true, myPos=null;
+document.getElementById("loc").onclick=function(){first=true;map.locate({watch:true,enableHighAccuracy:true});};
+map.on("locationfound",function(e){
+  myPos=e.latlng;
+  if(!me){me=L.circleMarker(e.latlng,{radius:8,color:"#fff",weight:3,fillColor:"#1a73e8",fillOpacity:1}).addTo(map);
+    meAcc=L.circle(e.latlng,{radius:e.accuracy,weight:1,color:"#1a73e8",fillOpacity:.1}).addTo(map);}
+  else{me.setLatLng(e.latlng);meAcc.setLatLng(e.latlng).setRadius(e.accuracy);}
+  if(first){map.setView(e.latlng,17);first=false;}
+});
+map.on("locationerror",function(){alert("Position indisponible : autorisez la localisation pour ce site.");});
+
+// Signalement à ma position (ou au centre de la carte)
+document.getElementById("sig").onclick=function(){openSignal();};
+function openSignal(){
+  var p=myPos||map.getCenter();
+  var html='<div class="pop"><b>⚠️ Signaler '+(myPos?"à votre position":"au centre de la carte")+'</b>'+
+    (myPos?'':'<div class="msg">Pour votre position exacte, touchez d\'abord 📍</div>')+
+    '<textarea id="stxt" placeholder="Qu\'avez-vous vu ou appris ?"></textarea>'+
+    '<input id="swho" placeholder="Votre prénom" value="'+esc(ls("rc_who")||"")+'">'+
+    '<button id="ssend" class="stop" type="button">Envoyer le signalement</button><div class="msg" id="smsg"></div></div>';
+  var popup=L.popup({maxWidth:Math.min(300,window.innerWidth-40),autoPanPaddingTopLeft:[10,70]}).setLatLng(p).setContent(html).openOn(map);
+  var root=popup.getElement(), msg=root.querySelector("#smsg");
+  root.querySelector("#ssend").onclick=function(){
+    var txt=root.querySelector("#stxt").value.trim(), who=root.querySelector("#swho").value.trim();
+    if(!txt){msg.textContent="Décrivez ce que vous avez vu.";msg.className="msg err";return;}
+    ls("rc_who",who); msg.textContent="Envoi…"; msg.className="msg";
+    post("/point",{lat:p.lat,lng:p.lng,txt:txt,who:who}).then(function(){map.closePopup();load();})
+      .catch(function(err){msg.textContent=err.message;msg.className="msg err";});
+  };
+}
+</script>
+</body>
+</html>

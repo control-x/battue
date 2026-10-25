@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lancer une battue</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+<h1>Lancer une battue</h1>
+<p class="alert">Avez-vous prévenu le <a href="tel:17">17</a> ou le <a href="tel:112">112</a> ? Cet outil vient en complément des secours, jamais à leur place.</p>
+<form id="f">
+  <label>Prénom de la personne<input name="name" autocomplete="off"></label>
+  <label>Dernier lieu où elle a été vue *<input name="address" list="addrs" required autocomplete="off" placeholder="Adresse, ville"></label>
+  <datalist id="addrs"></datalist>
+  <label>Vue pour la dernière fois le<input name="since" type="datetime-local"></label>
+  <label>Photo récente<input name="photo" type="file" accept="image/*"></label>
+  <label>Description et tenue<textarea name="description" rows="4" placeholder="Âge, taille, cheveux, vêtements, habitudes…"></textarea></label>
+  <label>Numéro unique à appeler si quelqu'un la voit<input name="phone" type="tel" placeholder="06 12 34 56 78"></label>
+  <label>Lien du groupe WhatsApp des bénévoles<input name="whatsapp" type="url" placeholder="https://chat.whatsapp.com/…"></label>
+  <label class="check"><input name="police" type="checkbox" required> J'ai signalé la disparition à la police ou à la gendarmerie</label>
+  <button type="submit">Créer la battue</button>
+  <p id="msg" role="status"></p>
+</form>
+</main>
+<script>
+var form=document.getElementById("f"), msg=document.getElementById("msg"), found={};
+function say(t){msg.textContent=t;}
+// Suggestions d'adresses (Base Adresse Nationale), appelées depuis le navigateur
+var timer;
+form.address.oninput=function(){
+  clearTimeout(timer); var q=this.value.trim(); if(q.length<4||found[q])return;
+  timer=setTimeout(function(){geocode(q,5).then(function(fs){
+    document.getElementById("addrs").innerHTML=fs.map(function(f){found[f.properties.label]=f;return '<option value="'+f.properties.label.replace(/"/g,"&quot;")+'">';}).join("");
+  });},300);
+};
+function geocode(q,limit){
+  return fetch("https://api-adresse.data.gouv.fr/search/?limit="+limit+"&q="+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){return j.features||[];});
+}
+// Photo réduite dans le navigateur : 800 px, JPEG
+function shrink(file){
+  if(!file)return Promise.resolve("");
+  return createImageBitmap(file).then(function(img){
+    var k=Math.min(1,800/Math.max(img.width,img.height)), c=document.createElement("canvas");
+    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL("image/jpeg",.75);
+  });
+}
+form.onsubmit=function(e){
+  e.preventDefault();
+  var q=form.address.value.trim(), btn=form.querySelector("button");
+  btn.disabled=true; say("Création…");
+  Promise.all([found[q]?[found[q]]:geocode(q,1),shrink(form.photo.files[0])]).then(function(r){
+    var f=r[0][0]; if(!f)throw new Error("Adresse introuvable, précisez la ville.");
+    return fetch("/api/new",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+      name:form.name.value.trim(), address:f.properties.label, lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0],
+      since:form.since.value, description:form.description.value.trim(), phone:form.phone.value.trim(),
+      whatsapp:form.whatsapp.value.trim(), photo:r[1], police:form.police.checked})});
+  }).then(function(res){return res.json().then(function(j){if(!res.ok)throw new Error(j.error||"Erreur "+res.status);return j;});})
+    .then(function(j){location.href="/r/"+j.id+"#c="+j.coord+"&new";})
+    .catch(function(err){btn.disabled=false;say(err.message==="Failed to fetch"?"Pas de connexion internet, réessayez.":err.message);});
+};
+</script>
+</body>
+</html>

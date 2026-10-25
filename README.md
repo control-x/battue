@@ -14,14 +14,15 @@ Site : [battue.org](https://www.battue.org) · Feuille de route : [ROADMAP.md](R
 | --- | --- |
 | `/` | Présentation, bons réflexes, lancement |
 | `/nouvelle` | Création d'une battue (Base Adresse Nationale, photo réduite dans le navigateur) |
+| `/fiche`, `/f/<id>` | Fiche de préparation chiffrée dans le navigateur, pour lancer une battue pré-remplie |
 | `/r/<code>` | Carte de la battue : carreaux de 500 m autour du départ, binômes, signalements, journal, affiche avec QR code |
-| `/admin` | Suivi sans contenu : battues ouvertes en nombres, fermeture par code, historique anonyme, compteurs |
+| `/admin` | Suivi sans contenu : battues ouvertes en nombres, fermeture par code, historique sans donnée nominative (export en totaux seulement), compteurs |
 | `/confidentialite`, `/mentions-legales` | Informations légales |
 
 Tout tient dans un Worker Cloudflare (`src/worker.js`) et ses fichiers statiques (`public/`), sans étape de build :
 
 - une **Durable Object par battue** (`Search`), qui garde l'état et le diffuse en WebSocket ;
-- un **registre** (`Registry`), qui ne garde que les codes et les dates des battues ouvertes, et l'historique anonyme des battues terminées (jour, département, durées, nombres) ;
+- un **registre** (`Registry`), qui ne garde que les codes et les dates des battues ouvertes, l'historique des battues terminées (jour, département, durées, nombres ; conservé 5 ans au plus) et les motifs de signalement d'abus des battues ouvertes ;
 - un **test complet toutes les heures** (tâche planifiée), avec une alerte [ntfy](https://ntfy.sh) en cas d'échec.
 
 ## Lancer en local
@@ -33,7 +34,15 @@ npx wrangler@4 dev --test-scheduled
 
 Puis ouvrez http://localhost:8787. L'admin est sur http://localhost:8787/admin#t=test-admin.
 
-Pour lancer le test de bout en bout : `curl "localhost:8787/__scheduled?cron=0+*+*+*+*"`. Les échecs apparaissent dans la console de wrangler.
+Pour lancer le test horaire de production : `curl "localhost:8787/__scheduled?cron=0+*+*+*+*"`. Les échecs apparaissent dans la console de wrangler.
+
+Tests de bout en bout, hors production (Node 22, serveur local lancé) :
+
+```sh
+node tests/e2e.mjs            # BASE=http://localhost:8787 ADMIN_TOKEN=test-admin par défaut
+```
+
+Documentation RGPD et audit : [`docs/`](docs).
 
 ## Déployer
 

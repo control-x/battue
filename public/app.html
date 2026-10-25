@@ -290,7 +290,7 @@
       <label class="check"><input type="radio" name="foundby" value="no"> Non</label>
       <label class="check"><input type="radio" name="foundby" value="unknown"> Je ne sais pas</label>
     </div>
-    <p class="msg">Facultatif et anonyme&nbsp;: seulement pour mesurer l'utilité de Battue.</p>
+    <p class="msg">Facultatif, sans votre nom&nbsp;: seulement pour mesurer l'utilité de Battue.</p>
   </fieldset>
   <button id="close" class="btn btn-primary" type="button">Clôturer la recherche</button>
   <div class="msg" id="closemsg">La clôture supprime toutes les données, journal compris&nbsp;: exportez-le avant.</div>
@@ -593,10 +593,17 @@ var ws=null, wsLive=false;
 function connectWs(){
   if(!TOKEN||(ws&&ws.readyState<2))return;
   ws=new WebSocket(location.origin.replace(/^http/,"ws")+API+"/ws");
-  ws.onopen=function(){ws.send("auth "+TOKEN+" "+DEVICE);wsLive=true;var maj=document.getElementById("maj");maj.textContent="En direct";maj.className="live";};
-  ws.onmessage=function(e){if(e.data!=="pong")applyState(JSON.parse(e.data));};
+  ws.onopen=function(){ws.send("auth "+TOKEN+" "+DEVICE);};
+  // « En direct » seulement quand le serveur a accepté le jeton et envoyé un état valide ; sinon retour au rafraîchissement
+  ws.onmessage=function(e){
+    if(e.data==="pong")return;
+    var state; try{state=JSON.parse(e.data);}catch(err){ws.close();return;}
+    if(!state||!state.secteurs){ws.close();return;}
+    applyState(state);
+    if(!wsLive){wsLive=true;var maj=document.getElementById("maj");maj.textContent="En direct";maj.className="live";}
+  };
   ws.onclose=function(e){
-    wsLive=false; document.getElementById("maj").className="";
+    wsLive=false; document.getElementById("maj").className=""; load();
     if(e.code===4004)return showGone("La recherche a été clôturée. Merci à tous.");
     if(e.code===4003)return;
     document.getElementById("maj").textContent="Reconnexion…";

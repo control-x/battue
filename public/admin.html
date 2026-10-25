@@ -20,6 +20,8 @@
   td.code{font-weight:800;font-stretch:85%;letter-spacing:.04em;font-size:1.1rem}
   td.warn{color:var(--grid);font-weight:800}
   td.calm{color:var(--ink-2)}
+  tr.abuse td{white-space:normal;text-align:left;color:var(--grid);border-bottom:2px solid var(--grid)}
+  tr.abuse div{color:var(--ink);margin-top:.2rem}
   td.tiles{white-space:nowrap}
   .tiles span{display:inline-flex;align-items:center;gap:.3rem;margin-left:.7rem;white-space:nowrap}
   .sw{display:inline-block;width:14px;height:14px;border:1px solid var(--grid);background:var(--sheet)}
@@ -73,7 +75,8 @@
     <p>Gardé après l'effacement des battues. Aucune donnée personnelle&nbsp;: ni nom, ni adresse, ni position, ni code de battue&nbsp;; seulement le jour, le département et des nombres.</p>
     <div id="histsum"></div>
     <div class="scroll" id="history"><p class="empty">Chargement…</p></div>
-    <p><button class="btn" type="button" id="csv" hidden>Exporter en CSV</button></p>
+    <p><button class="btn" type="button" id="csv" hidden>Exporter les totaux (CSV)</button></p>
+    <p class="legendline">L'export ne contient que des totaux par mois et par département&nbsp;; les départements de moins de 3 battues sont masqués. Les lignes ci-dessus ne se publient jamais une par une. Conservation&nbsp;: 5 ans au plus.</p>
   </section>
 
   <section>
@@ -113,7 +116,9 @@ function loadSearches(){
           '<td'+(stuck?' class="warn" title="Aucun bénévole depuis plus de 30 min"':s.volunteersOnline?'':' class="calm"')+'>'+s.volunteersOnline+(s.coordOnline?' + coord.':'')+'</td>'+
           '<td class="tiles"><span title="En cours"><i class="sw doing"></i>'+s.sectors.doing+'</span><span title="Faits"><i class="sw done"></i>'+s.sectors.done+'</span><span title="À revoir"><i class="sw alert"></i>'+s.sectors.alert+'</span></td><td>'+s.points+'</td>'+
           '<td><span class="steps"><i class="on"></i><i'+(s.volunteerSeen?' class="on"':'')+'></i><i'+(s.sectorSeen?' class="on"':'')+'></i></span></td>'+
-          '<td><button class="btn" type="button" data-close="'+esc(s.id)+'">Fermer</button></td></tr>';
+          '<td><button class="btn" type="button" data-close="'+esc(s.id)+'">Fermer</button></td></tr>'+
+          (s.reports&&s.reports.length?'<tr class="abuse"><td colspan="8"><b>'+s.reports.length+' signalement'+(s.reports.length>1?'s':'')+' d\'abus</b>'+
+            s.reports.map(function(r){return '<div>'+ago(r.at)+' : '+(r.reason?esc(r.reason):'<i>sans motif</i>')+'</div>';}).join("")+'</td></tr>':'');
       }).join("")+'</tbody></table>';
   }).catch(function(err){fail(box,err);});
 }
@@ -180,10 +185,22 @@ function loadHistory(){
       }).join("")+'</tr>';}).join("")+'</tbody></table>';
   }).catch(function(err){fail(box,err);});
 }
+// Export agrégé seulement : par mois (totaux et médianes), par département (nombre, masqué sous 3)
+var MIN_GROUP=3;
+function aggregate(rows){
+  var answered=rows.filter(function(h){return h.outcome;}), by=rows.filter(function(h){return h.foundByBattue==="yes"||h.foundByBattue==="no";});
+  var pick=function(k){return rows.map(function(h){return h[k];});}, sum=function(k){return rows.reduce(function(n,h){return n+(h[k]||0);},0);};
+  return [rows.length,answered.length,answered.filter(function(h){return h.outcome==="found";}).length,by.length,by.filter(function(h){return h.foundByBattue==="yes";}).length,
+    median(pick("durationMin")),median(pick("launchDelayMin")),median(pick("firstVolunteerMin")),median(pick("phones")),sum("sectorsDone"),sum("points"),rows.filter(function(h){return h.fromSheet;}).length];
+}
 document.getElementById("csv").onclick=function(){
-  var keys=COLUMNS.map(function(c){return c[0];}).concat(["activeMin","firstSectorMin","hadPhoto","hadWhatsapp"]);
-  var csv=keys.join(";")+"\n"+HISTORY.map(function(h){return keys.map(function(k){return h[k]==null?"":String(h[k]).replace(/;/g,",");}).join(";");}).join("\n")+"\n";
-  var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"})); a.download="historique-battue.csv"; a.click();
+  var head=["groupe","valeur","battues","issues_renseignees","retrouvees","reponses_grace_a_la_battue","grace_a_la_battue","duree_mediane_min","lancee_apres_mediane_min","premier_benevole_median_min","telephones_median","carreaux_faits","signalements","depuis_une_fiche"];
+  var groups=function(key){var g={};HISTORY.forEach(function(h){var k=key(h)||"inconnu";(g[k]=g[k]||[]).push(h);});return g;};
+  var months=groups(function(h){return (h.day||"").slice(0,7);}), depts=groups(function(h){return h.departement;});
+  var lines=Object.keys(months).sort().map(function(m){return ["mois",m].concat(aggregate(months[m]));});
+  Object.keys(depts).sort().forEach(function(d){lines.push(["departement",d,depts[d].length<MIN_GROUP?"<"+MIN_GROUP:depts[d].length]);});
+  var csv=head.join(";")+"\n"+lines.map(function(l){return l.map(function(v){return v==null?"":v;}).join(";");}).join("\n")+"\n";
+  var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"})); a.download="battue-totaux.csv"; a.click();
 };
 
 // Compteurs (Analytics Engine)

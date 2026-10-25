@@ -48,6 +48,9 @@
   dialog h2{margin:0 0 8px;font-size:18px}
   dialog button{box-shadow:none;margin:4px 0;width:100%}
   dialog .desc{white-space:pre-wrap}
+  .rules{padding-left:20px;margin:8px 0}
+  .rules li{margin:4px 0}
+  #sum.late{color:#c01818}
   #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px}
   @media (max-width:520px){
@@ -91,8 +94,31 @@
   <p id="asince"></p>
   <p id="adesc" class="desc"></p>
   <p id="aphone"></p>
-  <p><b>Consignes :</b> regarder sans appeler son nom, fouiller buissons, fossés et berges, ne pas entrer chez les gens, jamais de berge seul ni la nuit.</p>
+  <b>Consignes</b>
+  <ul class="rules">
+    <li>Regardez sans appeler son nom : une personne désorientée peut se cacher ou ne pas répondre.</li>
+    <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
+    <li>N'entrez pas chez les gens.</li>
+    <li>Jamais de berge seul, ni la nuit.</li>
+    <li>Commencez votre secteur sur la carte en partant, terminez-le en rentrant.</li>
+  </ul>
   <form method="dialog"><button>Fermer</button></form>
+</dialog>
+
+<dialog id="dwelcome">
+  <h2>Merci de nous aider</h2>
+  <label>Votre prénom<input id="wwho" autocomplete="given-name"></label>
+  <label>Prénom de votre binôme<input id="wpair" placeholder="Évitez de chercher seul"></label>
+  <b>Les consignes</b>
+  <ul class="rules">
+    <li>Regardez sans appeler son nom : une personne désorientée peut se cacher ou ne pas répondre.</li>
+    <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
+    <li>N'entrez pas chez les gens.</li>
+    <li>Jamais de berge seul, ni la nuit.</li>
+    <li>Commencez votre secteur sur la carte en partant, terminez-le en rentrant.</li>
+  </ul>
+  <button id="wgo" class="wa" type="button">C'est parti : choisir un secteur</button>
+  <div class="msg" id="wmsg"></div>
 </dialog>
 
 <dialog id="dinvite">
@@ -139,6 +165,11 @@ if(justCreated)history.replaceState(null,"",location.pathname+"#"+(hash.get("c")
 var DEVICE=ls("rc_dev"); if(!DEVICE){DEVICE=Date.now().toString(36)+Math.random().toString(36).slice(2,10);ls("rc_dev",DEVICE);}
 function mine(){try{return JSON.parse(ls("rc_mine")||"{}");}catch(e){return {};}}
 function isMine(id){var s=sectorStatus[id];return !!(s&&s.s==="doing"&&s.ds&&mine()[id]===s.ds);}
+// Binôme de cet appareil pour cette battue, ex. « Marc + Julie »
+function team(v){return ls("battue_team_"+SEARCH_ID,v)||(v===undefined?ls("rc_who")||"":v);}
+// Retard : le binôme a dépassé la durée qu'il avait prévue
+function late(s){return s.s==="doing"&&s.p&&Date.now()>s.ds+s.p*60000;}
+function volLink(){return location.origin+location.pathname+"#v="+(ROLE==="coord"?VOL:TOKEN);}
 
 function showGone(msg){var g=document.getElementById("gone");g.textContent=msg;g.hidden=false;}
 if(!TOKEN)showGone("Lien incomplet : demandez le lien de la battue au coordinateur.");
@@ -186,7 +217,7 @@ function post(path,body){
 
 function statusLine(s){
   var k=s.s||"todo";
-  if(k==="doing")return '▶ En cours'+(s.e?' – '+esc(s.e):'')+(s.d?', depuis '+esc(s.d):'')+(s.ds?' ('+since(s.ds)+')':'');
+  if(k==="doing")return (late(s)?'⏰ En retard':'▶ En cours')+(s.e?' – '+esc(s.e):'')+(s.d?', depuis '+esc(s.d):'')+(s.ds?' ('+since(s.ds)+(s.p?' / prévu '+since(Date.now()-s.p*60000):'')+')':'');
   if(k==="done")return '✓ Fait'+(s.e?' – '+esc(s.e):'')+(s.d||s.f?', '+esc(s.d||'?')+' → '+esc(s.f||'?'):'');
   if(k==="alert")return '⚠️ Signalement / à refaire'+(s.e?' – '+esc(s.e):'');
   return 'À faire';
@@ -194,10 +225,12 @@ function statusLine(s){
 function openCell(id,errMsg,errMsg2){
   var s=sectorStatus[id]||{}, k=s.s||"todo", c=cells[id].center;
   var gm="https://www.google.com/maps/dir/?api=1&destination="+c.lat.toFixed(5)+","+c.lng.toFixed(5)+"&travelmode=walking";
-  var link=location.origin+location.pathname+"?s="+id;
+  var link=volLink().replace("#","?s="+id+"#");
+  var waText="Secteur "+id+(INFO.name?" pour retrouver "+INFO.name:"")+" : "+link;
   var html='<div class="pop"><b>Secteur '+id+'</b>'+(cells[id].prio?' · <b style="color:#a85a00">prioritaire</b>':'')+'<br><span class="st" style="background:'+(COLORS[k]||"#eee")+'">'+statusLine(s)+'</span>'+
     (s.n?'<br>'+esc(s.n):'')+
-    '<br><a href="'+gm+'" target="_blank" rel="noopener">Itinéraire à pied</a> · <a href="#" id="cp">Copier le lien</a><hr>';
+    '<br><a href="'+gm+'" target="_blank" rel="noopener">Itinéraire à pied</a> · <a href="#" id="cp">Copier le lien</a>'+
+    '<br><a href="https://wa.me/?text='+encodeURIComponent(waText)+'" target="_blank" rel="noopener">📲 Envoyer ce secteur sur WhatsApp</a><hr>';
   if(k==="doing"&&isMine(id)){
     html+='<textarea id="fn" placeholder="Note : affiches posées, ce qui a été vu…">'+esc(s.n)+'</textarea>'+
       '<button id="fstop" class="stop" type="button">■ Terminer la recherche</button>';
@@ -206,7 +239,8 @@ function openCell(id,errMsg,errMsg2){
   }else if(k==="done"){
     html+='<div class="msg">Secteur terminé. Seul le coordinateur peut le rouvrir ou le modifier.</div>';
   }else{
-    html+='<input id="fe" placeholder="Votre prénom" value="'+esc(ls("rc_who")||"")+'">'+
+    html+='<input id="fe" placeholder="Vos prénoms, ex. Marc + Julie" value="'+esc(team())+'">'+
+      '<label>Durée prévue<select id="fp"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select></label>'+
       '<button id="fstart" class="go" type="button">▶ Commencer la recherche</button>'+
       '<details id="fpast"><summary><b>✓ J\'ai déjà fait ce secteur</b></summary>'+
       '<div class="row"><label>Début<input id="pd" type="time"></label>'+
@@ -241,7 +275,7 @@ function openCell(id,errMsg,errMsg2){
   function firstName(){
     var who=$("fe").value.trim();
     if(!who){say(m,"Indiquez votre prénom.",true);return "";}
-    ls("rc_who",who); return who;
+    team(who); return who;
   }
   if(bPast)bPast.onclick=function(){
     var who=firstName(); if(!who)return;
@@ -253,7 +287,7 @@ function openCell(id,errMsg,errMsg2){
   if(bStart)bStart.onclick=function(){
     var who=firstName(); if(!who)return;
     say(m,"Enregistrement…");
-    post("/sector/start",{id:id,e:who,o:DEVICE}).then(function(j){
+    post("/sector/start",{id:id,e:who,o:DEVICE,p:+$("fp").value}).then(function(j){
       var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved(j);
     }).catch(failed);
   };
@@ -284,10 +318,11 @@ function renderList(){
   var ids=Object.keys(sectorStatus).filter(function(id){return cells[id]&&sectorStatus[id].s&&sectorStatus[id].s!=="todo";});
   var rank={doing:0,alert:1,done:2};
   ids.sort(function(a,b){return rank[sectorStatus[a].s]-rank[sectorStatus[b].s]||(sectorStatus[b].t||0)-(sectorStatus[a].t||0);});
-  var n={doing:0,done:0,alert:0}; ids.forEach(function(id){n[sectorStatus[id].s]++;});
+  var n={doing:0,done:0,alert:0,late:0}; ids.forEach(function(id){n[sectorStatus[id].s]++;if(late(sectorStatus[id]))n.late++;});
   var sum=document.getElementById("sum"), list=document.getElementById("list");
   sum.hidden=!ids.length;
-  sum.textContent="▶ "+n.doing+" en cours · ✓ "+n.done+" faits"+(n.alert?" · ⚠️ "+n.alert:"")+(listOpen?" ▴":" ▾");
+  sum.textContent=(n.late?"⏰ "+n.late+" en retard · ":"")+"▶ "+n.doing+" en cours · ✓ "+n.done+" faits"+(n.alert?" · ⚠️ "+n.alert:"")+(listOpen?" ▴":" ▾");
+  sum.className=n.late?"late":"";
   list.hidden=!listOpen||!ids.length;
   list.innerHTML=ids.map(function(id){return '<div data-id="'+id+'"><b>'+id+'</b> '+statusLine(sectorStatus[id])+(isMine(id)?' <b>(vous)</b>':'')+'</div>';}).join("");
   var info=document.getElementById("info"), myId=ids.filter(isMine)[0];
@@ -302,7 +337,7 @@ document.getElementById("list").onclick=function(e){
 function paint(){
   Object.keys(cells).forEach(function(id){
     var s=sectorStatus[id]||{}, col=COLORS[s.s||"todo"], sel=(focusId===id), base=cells[id].prio?"#e07b00":"#1f5f8b";
-    cells[id].rect.setStyle({fillColor:col||base,fillOpacity:col?.55:.05,weight:sel?5:2,color:sel?"#c01818":base});
+    cells[id].rect.setStyle({fillColor:col||base,fillOpacity:col?.55:.05,weight:sel||late(s)?5:2,color:sel||late(s)?"#c01818":base});
     var sub=s.s==="doing"?"▶ "+esc(s.d||""):s.s==="done"?"✓ "+esc(s.d||"")+"–"+esc(s.f||""):"";
     cells[id].lbl.setIcon(L.divIcon({className:"",html:'<div class="lbl">'+id+(sub?"<small>"+sub+"</small>":"")+(s.e&&s.s!=="todo"?"<small>"+esc(s.e)+"</small>":"")+"</div>",iconSize:[90,46],iconAnchor:[45,23]}));
   });
@@ -335,6 +370,8 @@ function setup(){
   }).catch(function(){});
   if(ROLE==="coord")setupCoordinator();
   buildGrid(INFO.lat,INFO.lng);
+  if(ROLE==="vol"&&!ls("battue_team_"+SEARCH_ID))welcome();
+  else if(cells[focusId])openCell(focusId);
 }
 function applyState(j){
   if(!INFO){ROLE=j.role;INFO=j.info;VOL=j.vol;setup();}
@@ -372,10 +409,24 @@ document.addEventListener("visibilitychange",function(){if(!document.hidden){con
 
 load(); connectWs();
 setInterval(function(){if(!wsLive)load();},10000);
-setInterval(renderList,60000); // durées « depuis … »
+setInterval(paint,60000); // durées « depuis … » et retards
 
 document.getElementById("home").onclick=function(){if(INFO)map.setView([INFO.lat,INFO.lng],17);};
 document.getElementById("avis").onclick=function(){document.getElementById("davis").showModal();};
+
+// Accueil du bénévole à sa première visite : prénoms du binôme et consignes, puis son secteur s'il en a reçu un
+function welcome(){
+  var dlg=document.getElementById("dwelcome"), who=document.getElementById("wwho");
+  who.value=ls("rc_who")||"";
+  dlg.oncancel=function(e){e.preventDefault();};
+  document.getElementById("wgo").onclick=function(){
+    var me=who.value.trim(), pair=document.getElementById("wpair").value.trim();
+    if(!me){document.getElementById("wmsg").textContent="Indiquez votre prénom.";document.getElementById("wmsg").className="msg err";return;}
+    ls("rc_who",me); team(me+(pair?" + "+pair:"")); dlg.close();
+    if(cells[focusId])openCell(focusId);
+  };
+  dlg.showModal();
+}
 
 // Coordinateur : liens, partage WhatsApp, clôture
 function setupCoordinator(){

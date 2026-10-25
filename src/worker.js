@@ -9,7 +9,7 @@
 // GET  /photo            -> {photo: "data:image/jpeg;base64,…"}
 // GET  /ws               -> websocket : envoyer "auth <jeton>", puis reçoit l'état à chaque changement
 // POST /sector  {id,s,e,n,d,f}  correction manuelle, coordinateur seulement ; d/f : heures "HH:MM"
-// POST /sector/start {id,e,o}   commence ; o : jeton de l'appareil ; rouvrir un secteur fait : coordinateur
+// POST /sector/start {id,e,o,p} commence ; p : durée prévue en minutes ; o : jeton de l'appareil ; rouvrir un secteur fait : coordinateur
 // POST /sector/stop  {id,o,n}   termine ; seul l'appareil qui a commencé peut arrêter
 // POST /sector/done  {id,e,d,f,n} déclare un secteur déjà fait (heures saisies par le bénévole)
 // POST /point   {lat,lng,txt,who}
@@ -156,7 +156,8 @@ export class Search extends DurableObject {
         if (cur?.s === "doing" && cur.o !== owner)
           return json({ error: "Secteur déjà en cours" + (cur.e ? " par " + cur.e : "") + " depuis " + cur.d }, 409);
         if (cur?.s === "done" && !isAdmin) return json({ error: "admin" }, 403);
-        meta = { s: "doing", e: clip(b.e, 60), n: cur?.n || "", d: nowParis(), f: "", ds: Date.now(), o: owner, t: Date.now() };
+        // p : durée prévue en minutes, pour signaler les binômes en retard
+        meta = { s: "doing", e: clip(b.e, 60), n: cur?.n || "", d: nowParis(), f: "", ds: Date.now(), p: Math.min(240, Math.max(0, Math.round(+b.p || 0))), o: owner, t: Date.now() };
       } else {
         if (cur?.s !== "doing") return json({ error: "Ce secteur n'est pas en cours" }, 409);
         if (cur.o !== owner) return json({ error: "Seule la personne qui a commencé peut terminer" }, 403);

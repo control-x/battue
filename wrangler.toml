@@ -28,9 +28,17 @@ class_name = "Registry"
 tag = "v1"
 new_sqlite_classes = ["Search"]
 
+[[durable_objects.bindings]]
+name = "SHEET"
+class_name = "Sheet"
+
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Registry"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Sheet"]
 
 # Compteurs admin (aucun contenu de recherche)
 [[analytics_engine_datasets]]

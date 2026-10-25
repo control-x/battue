@@ -128,6 +128,7 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 .swatch.prio{border:3px solid var(--ink);box-shadow:inset 0 0 0 3px var(--sheet),inset 0 0 0 5px var(--ink)}
 .swatch.late{border:3px dashed var(--grid)}
 
+.row-actions{display:flex;flex-wrap:wrap;gap:.6rem}
 .reflexes{margin:0;padding-left:1.4rem}
 .reflexes li{margin:.6rem 0;padding-left:.25rem}
 .reflexes li::marker{color:var(--grid);font-weight:800}

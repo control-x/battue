@@ -22,6 +22,9 @@
 // Sans activité pendant 30 jours, la battue s'efface d'elle-même.
 //
 // Admin, avec Authorization: Bearer <ADMIN_TOKEN> ; jamais de contenu de battue :
+// Fiches de préparation (contenu chiffré dans le navigateur, clé dans la partie # du lien /f/<id>#<clé>) :
+// POST /api/fiche {token,data} -> {id,version} ; GET, PUT {data,version}, DELETE /api/f/<id> avec Authorization: Bearer <jeton>
+//
 // GET  /api/admin/searches -> battues ouvertes : code, dates, nombre de bénévoles connectés, de carreaux, de signalements
 // POST /api/admin/close {id} -> ferme une battue par son code (même effet qu'une clôture)
 // GET  /api/admin/stats    -> compteurs Analytics Engine sur 24 h, 7 et 30 jours
@@ -58,6 +61,54 @@ const stubFor = (env, namespace, name) => {
 };
 const searchStub = (env, id) => stubFor(env, env.SEARCH, id);
 const registryStub = (env) => stubFor(env, env.REGISTRY, "registre");
+const sheetStub = (env, id) => stubFor(env, env.SHEET, "fiche:" + id);
+const sha256Hex = async (text) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+const SHEET_IDLE_MS = 3 * 365 * 24 * 3600 * 1000;
+const SHEET_MAX = 2_000_000;
+
+// Fiche de préparation : un contenu chiffré dans le navigateur, illisible ici. On garde l'empreinte du jeton
+// d'écriture (tiré de la clé, qui reste dans la partie # du lien) et un numéro de version contre les écrasements.
+export class Sheet extends DurableObject {
+  async load() {
+    return (this.sheet ??= (await this.ctx.storage.get("sheet")) || null);
+  }
+  async touch() {
+    await this.ctx.storage.setAlarm(Date.now() + SHEET_IDLE_MS);
+  }
+  async init(tokenHash, data) {
+    if (await this.load()) return false;
+    this.sheet = { tokenHash, data, version: 1, updated: Date.now() };
+    await this.ctx.storage.put("sheet", this.sheet);
+    await this.touch();
+    return true;
+  }
+  async read(tokenHash) {
+    const sheet = await this.load();
+    if (!sheet || sheet.tokenHash !== tokenHash) return null;
+    await this.touch();
+    return { data: sheet.data, version: sheet.version, updated: sheet.updated };
+  }
+  async write(tokenHash, data, version) {
+    const sheet = await this.load();
+    if (!sheet || sheet.tokenHash !== tokenHash) return { status: 404 };
+    if (version !== sheet.version) return { status: 409 };
+    Object.assign(sheet, { data, version: sheet.version + 1, updated: Date.now() });
+    await this.ctx.storage.put("sheet", sheet);
+    await this.touch();
+    return { status: 200, version: sheet.version };
+  }
+  async remove(tokenHash) {
+    const sheet = await this.load();
+    if (!sheet || sheet.tokenHash !== tokenHash) return false;
+    await this.alarm();
+    return true;
+  }
+  async alarm() {
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+    this.sheet = null;
+  }
+}
 
 // Registre des battues pour l'admin : le code et les dates, rien d'autre
 export class Registry extends DurableObject {
@@ -138,6 +189,8 @@ export class Search extends DurableObject {
       points: stats.points,
       hadPhoto: !!info.hasPhoto,
       hadWhatsapp: !!info.whatsapp,
+      fromSheet: !!info.fromSheet,
+      places: (info.places || []).length,
     };
   }
 
@@ -376,7 +429,11 @@ async function createSearch(req, env) {
   const info = {
     name: clip(b.name, 60), address: clip(b.address, 200), lat, lng, since: clip(b.since, 20),
     description: clip(b.description, 1000), phone: clip(b.phone, 20).replace(/[^\d+ ]/g, ""), whatsapp,
-    hasPhoto: !!photo, created: Date.now(), test: b.test === true,
+    hasPhoto: !!photo, created: Date.now(), test: b.test === true, fromSheet: b.fromSheet === true,
+    // Lieux du passé venus de la fiche : à visiter en priorité
+    places: (Array.isArray(b.places) ? b.places : []).slice(0, 12)
+      .filter((place) => isFinite(place?.lat) && isFinite(place?.lng) && Math.abs(place.lat) <= 90 && Math.abs(place.lng) <= 180)
+      .map((place) => ({ lat: +place.lat, lng: +place.lng, kind: ["home", "found", "habit"].includes(place.kind) ? place.kind : "habit", label: clip(place.label, 60) })),
   };
   if (isFinite(b.sinceTs) && b.sinceTs > info.created - IDLE_MS && b.sinceTs < info.created + 3600e3) info.sinceTs = +b.sinceTs;
   const coord = randomToken(), vol = randomToken();
@@ -395,6 +452,10 @@ async function handle(req, env) {
   if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
   if (url.pathname === "/api/report" && req.method === "POST") return reportAbuse(req, env);
+  if (url.pathname === "/api/fiche" && req.method === "POST") return createSheet(req, env);
+  const sheetApi = url.pathname.match(/^\/api\/f\/([a-z0-9]{10})$/);
+  if (sheetApi) return sheetRequest(req, env, sheetApi[1]);
+  if (/^\/f\/[a-z0-9]{10}\/?$/.test(url.pathname)) return env.ASSETS.fetch(new Request(new URL("/fiche", url), req));
   if (url.pathname.startsWith("/api/admin/")) {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
     if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
@@ -434,6 +495,42 @@ async function adminStats(env) {
   } catch (err) {
     return json({ error: err.message }, 502);
   }
+}
+
+// Fiches de préparation. Authorization: Bearer <jeton d'écriture> ; le contenu est déjà chiffré.
+async function createSheet(req, env) {
+  let b;
+  try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+  if (typeof b.token !== "string" || b.token.length < 40) return json({ error: "jeton" }, 400);
+  if (typeof b.data !== "string" || b.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
+  const tokenHash = await sha256Hex(b.token);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(10)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
+    if (await sheetStub(env, id).init(tokenHash, b.data)) {
+      stat(env, "sheet-create", b.test === true);
+      return json({ id, version: 1 });
+    }
+  }
+  return json({ error: "Réessayez" }, 500);
+}
+
+async function sheetRequest(req, env, id) {
+  const tokenHash = await sha256Hex((req.headers.get("Authorization") || "").replace(/^Bearer /, ""));
+  const stub = sheetStub(env, id);
+  if (req.method === "GET") {
+    const sheet = await stub.read(tokenHash);
+    return sheet ? json(sheet) : json({ error: "Fiche introuvable : lien incomplet, ou fiche supprimée" }, 404);
+  }
+  if (req.method === "DELETE") return (await stub.remove(tokenHash)) ? json({ ok: true }) : json({ error: "Fiche introuvable" }, 404);
+  if (req.method === "PUT") {
+    let b;
+    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+    if (typeof b.data !== "string" || b.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
+    const result = await stub.write(tokenHash, b.data, b.version);
+    if (result.status === 409) return json({ error: "La fiche a été modifiée entre-temps par un proche : rechargez la page avant d'enregistrer." }, 409);
+    return result.status === 200 ? json({ ok: true, version: result.version }) : json({ error: "Fiche introuvable" }, 404);
+  }
+  return json({ error: "not found" }, 404);
 }
 
 // Signalement d'abus depuis une carte : l'admin est prévenu (ntfy) avec le code, puis ferme la battue depuis /admin.
@@ -495,6 +592,21 @@ async function selfTest(env) {
   expect((await call(`/api/r/${id}/close`, coord, {})).status === 200, "clôture");
   expect((await call(`/api/r/${id}/state`, coord)).status === 404, "données supprimées");
   expect((await registryStub(env).get(id))?.closed > 0, "registre à jour");
+  // Fiche : création, lecture, modification, conflit de version, suppression
+  const token = "t".repeat(43), auth = { Authorization: "Bearer " + token };
+  const sheetCall = async (path, method, body, headers = auth) => {
+    const r = await handle(new Request("https://www.battue.org" + path, { method, headers, body: body && JSON.stringify(body) }), env);
+    return { status: r.status, body: await r.json() };
+  };
+  const sheet = await sheetCall("/api/fiche", "POST", { token, data: "chiffré", test: true }, {});
+  expect(sheet.status === 200, "fiche créée");
+  const sheetPath = "/api/f/" + sheet.body.id;
+  expect((await sheetCall(sheetPath, "GET")).body.data === "chiffré", "fiche lue");
+  expect((await sheetCall(sheetPath, "GET", null, { Authorization: "Bearer faux" })).status === 404, "fiche refusée sans le bon jeton");
+  expect((await sheetCall(sheetPath, "PUT", { data: "v2", version: 1 })).body.version === 2, "fiche modifiée");
+  expect((await sheetCall(sheetPath, "PUT", { data: "v3", version: 1 })).status === 409, "écrasement refusé");
+  expect((await sheetCall(sheetPath, "DELETE")).status === 200, "fiche supprimée");
+  expect((await sheetCall(sheetPath, "GET")).status === 404, "fiche effacée");
 }
 
 async function notify(env, message) {

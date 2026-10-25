@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Fiche de préparation – Battue</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="preload" href="/fonts/archivo-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<style>
+  .launch{margin:0 0 2rem}
+  .launch p{margin:.3rem 0 .9rem}
+  .places{list-style:none;margin:0 0 1rem;padding:0;border-top:2px solid var(--ink)}
+  .places li{display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid #d8d8d3}
+  .places li span{flex:1}
+  .places li small{display:block;color:var(--ink-2)}
+  .places .btn{min-height:40px;padding:.3em .7em;font-size:.85rem}
+  .diamond{width:14px;height:14px;flex:none;background:var(--ink);border:2px solid #fff;outline:1.5px solid var(--ink);transform:rotate(45deg)}
+  .addplace{display:grid;gap:.6rem;padding:1rem;border:2px dashed #9a9a94;margin-bottom:1rem}
+  .addplace label{margin:0}
+  .keybox{border:3px solid var(--grid)}
+  .keybox input{font-size:.95rem}
+  .row2{display:flex;gap:.5rem;flex-wrap:wrap}
+  .row2 .btn{flex:1 1 12rem}
+  #photoprev{display:block;max-height:180px;border:2px solid var(--ink);margin:.4rem 0 .6rem}
+  .private{background:var(--paper);border:2px solid var(--ink);padding:1rem;margin-bottom:1.1rem}
+  .private legend{border:0;margin:0;padding:0 .3rem;width:auto}
+  #printcard{display:none}
+  @media print{
+    @page{margin:15mm}
+    body>*:not(#printcard){display:none!important}
+    #printcard{display:block;border:3px solid #000;padding:10mm;text-align:center;color:#000}
+    #printcard h1{font-size:30pt;margin:0 0 4mm}
+    #printcard img{width:60mm;height:60mm;image-rendering:pixelated;margin:4mm auto}
+    #printcard ol{text-align:left;font-size:14pt;max-width:120mm;margin:4mm auto}
+    #printcard .warn{font-size:11pt;border-top:2px solid #000;padding-top:4mm;margin-top:6mm}
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Battue</a>
+</header>
+<main class="form-page">
+  <h1 id="title">Fiche de préparation</h1>
+  <p id="msg" class="msg" role="status"></p>
+
+  <div id="launchbox" class="cartouche launch" hidden>
+    <p class="urgence" style="margin-top:0">Disparition&nbsp;? Appelez d'abord le <a href="tel:17" aria-label="Appeler le 17">17</a> ou le <a href="tel:112" aria-label="Appeler le 112">112</a></p>
+    <button id="launch" class="btn btn-primary btn-block btn-big" type="button">Lancer une battue maintenant</button>
+    <p class="msg">La battue est créée avec cette fiche&nbsp;; vous vérifiez le dernier lieu connu avant de la lancer. Les informations pour les secours restent dans la fiche.</p>
+  </div>
+
+  <div id="intro">
+    <p>Préparez-la au calme. Le jour où votre proche disparaît, un seul geste lance la battue pré-remplie, avec ses lieux du passé marqués sur la carte.</p>
+    <p><b>Chiffrée sur votre téléphone</b>&nbsp;: seules les personnes qui ont le lien peuvent la lire, pas même Battue. Si le lien est perdu, la fiche est perdue.</p>
+  </div>
+
+  <form id="f">
+    <fieldset>
+      <legend>La personne</legend>
+      <label>Prénom<input name="name" autocomplete="off"></label>
+      <label>Photo récente<span class="hint">Un visage net, de face si possible.</span><img id="photoprev" alt="Photo de la fiche" hidden><input name="photo" type="file" accept="image/*"></label>
+      <label>Description<span class="hint">Âge, taille, cheveux, manière de marcher, vêtements habituels.</span><textarea name="description" rows="3"></textarea></label>
+      <label>Habitudes<span class="hint">Ce qu'elle cherche quand elle sort, ce qui la rassure, ce qu'elle dit quand elle est perdue. Partagé avec les bénévoles.</span><textarea name="habits" rows="3"></textarea></label>
+    </fieldset>
+
+    <fieldset class="private">
+      <legend>Pour les secours seulement</legend>
+      <label style="margin:0">Traitements, appareil auditif, allergies…<span class="hint">À transmettre à la police ou aux secours. Jamais partagé avec les bénévoles.</span><textarea name="medical" rows="3"></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Les lieux</legend>
+      <label>Domicile<span class="hint">Point de départ proposé le jour J.</span><input name="home" list="addrs" autocomplete="off" placeholder="Adresse, ville"></label>
+      <p style="margin:.2rem 0 .6rem;font-weight:700">Lieux du passé, à visiter en priorité</p>
+      <ul class="places" id="places"></ul>
+      <div class="addplace">
+        <label>Adresse<input id="placeaddr" list="addrs" autocomplete="off" placeholder="Adresse, ville"></label>
+        <label>Ce lieu est<select id="placekind"><option value="home">un ancien domicile</option><option value="found">un endroit où elle a déjà été retrouvée</option><option value="habit">un lieu habituel (commerce, église, parc…)</option></select></label>
+        <label>Nom du lieu<span class="hint">Facultatif, par exemple « la boulangerie ».</span><input id="placelabel" maxlength="60" autocomplete="off"></label>
+        <button id="addplace" class="btn" type="button">Ajouter ce lieu</button>
+      </div>
+      <datalist id="addrs"></datalist>
+    </fieldset>
+
+    <fieldset>
+      <legend>Contacts</legend>
+      <label>Numéro à appeler si quelqu'un la voit<input name="phone" type="tel" autocomplete="tel" placeholder="06 12 34 56 78"></label>
+      <label>Lien du groupe WhatsApp familial<span class="hint">Facultatif. Il servira de groupe des bénévoles le jour J.</span><input name="whatsapp" type="url" placeholder="https://chat.whatsapp.com/…"></label>
+    </fieldset>
+
+    <button id="save" class="btn btn-primary btn-block btn-big" type="submit">Enregistrer la fiche</button>
+    <p class="msg" id="savemsg" role="status"></p>
+  </form>
+
+  <section id="keysection" hidden style="margin-top:2.5rem">
+    <div class="cartouche keybox">
+      <h2>Le lien de la fiche</h2>
+      <p><b>Ce lien est la seule clé.</b> Envoyez-le aux proches qui pourraient lancer la battue, et imprimez la fiche-clé pour la ranger avec les papiers importants. Battue ne peut pas le retrouver.</p>
+      <label>Lien<input id="sheetlink" readonly></label>
+      <div class="row2">
+        <button id="copy" class="btn" type="button">Copier le lien</button>
+        <button id="sharefamily" class="btn btn-wa" type="button">Envoyer aux proches</button>
+        <button id="printkey" class="btn" type="button">Imprimer la fiche-clé</button>
+      </div>
+    </div>
+    <p style="margin-top:2rem"><button id="delete" class="btn" type="button">Supprimer la fiche</button></p>
+    <p class="msg" id="deletemsg" role="status"></p>
+  </section>
+
+  <footer class="imprint">
+    <p>Sans ouverture pendant 3 ans, la fiche s'efface d'elle-même. <a href="/confidentialite">Confidentialité</a> · <a href="/mentions-legales">Mentions légales</a></p>
+  </footer>
+</main>
+
+<section id="printcard">
+  <h1 id="printtitle">Fiche Battue</h1>
+  <p>En cas de disparition&nbsp;:</p>
+  <ol>
+    <li>Appelez le 17 ou le 112.</li>
+    <li>Scannez ce code avec un téléphone.</li>
+    <li>Touchez « Lancer une battue maintenant ».</li>
+  </ol>
+  <img id="printqr" alt="QR code de la fiche" hidden>
+  <p class="warn">Ce code ouvre la fiche de préparation. Rangez cette page avec les papiers importants&nbsp;; ne l'affichez pas.</p>
+</section>
+
+<script src="/common.js"></script>
+<script>
+// Fiche chiffrée dans le navigateur : /f/<id>#k=<clé>. La clé ne quitte jamais le téléphone ; le serveur reçoit
+// un jeton tiré de la clé (pour autoriser lecture et écriture) et le contenu chiffré (AES-GCM).
+var form=document.getElementById("f"), found={}, PLACES=[], PHOTO="", ID=null, SECRET=null, KEYS=null, VERSION=0;
+var KINDS={home:"Ancien domicile",found:"Déjà retrouvée ici",habit:"Lieu habituel"};
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+function say(id,t,isErr){var el=document.getElementById(id);el.textContent=t;el.className=isErr?"msg err":"msg";}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
+
+var enc=new TextEncoder(), dec=new TextDecoder();
+function b64u(bytes){var s="";bytes.forEach(function(b){s+=String.fromCharCode(b);});return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+function unb64u(s){var bin=atob(s.replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(bin,function(c){return c.charCodeAt(0);});}
+function deriveKeys(secret){
+  var tag=enc.encode("battue-fiche-jeton"), buf=new Uint8Array(secret.length+tag.length); buf.set(secret); buf.set(tag,secret.length);
+  return Promise.all([crypto.subtle.digest("SHA-256",buf),crypto.subtle.importKey("raw",secret,"AES-GCM",false,["encrypt","decrypt"])])
+    .then(function(r){return {token:b64u(new Uint8Array(r[0])),key:r[1]};});
+}
+function seal(obj){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},KEYS.key,enc.encode(JSON.stringify(obj))).then(function(ct){return b64u(iv)+"."+b64u(new Uint8Array(ct));});
+}
+function unseal(data){
+  var parts=data.split(".");
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(parts[0])},KEYS.key,unb64u(parts[1])).then(function(pt){return JSON.parse(dec.decode(pt));});
+}
+function api(method,path,body){
+  return fetch(path,{method:method,headers:{"Content-Type":"application/json",Authorization:"Bearer "+KEYS.token},body:body&&JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error||"Erreur "+r.status);return j;});},
+      function(){throw new Error("Pas de connexion internet, réessayez.");});
+}
+function link(){return location.origin+"/f/"+ID+"#k="+b64u(SECRET);}
+
+// Lieux du passé
+function renderPlaces(){
+  document.getElementById("places").innerHTML=PLACES.length?PLACES.map(function(p,i){
+    return '<li><i class="diamond" aria-hidden="true"></i><span><b>'+esc(p.label||KINDS[p.kind])+'</b><small>'+esc(KINDS[p.kind])+(p.label?" · "+esc(p.address):"")+'</small></span><button class="btn" type="button" data-remove="'+i+'">Retirer</button></li>';
+  }).join(""):'<li><span class="msg" style="margin:0">Aucun lieu pour l\'instant.</span></li>';
+}
+document.getElementById("places").onclick=function(e){
+  var b=e.target.closest("[data-remove]"); if(!b)return;
+  PLACES.splice(+b.dataset.remove,1); renderPlaces();
+};
+document.getElementById("addplace").onclick=function(){
+  var addr=document.getElementById("placeaddr"), q=addr.value.trim();
+  if(!q)return say("savemsg","Indiquez l'adresse du lieu.",true);
+  resolveAddress(q,found).then(function(f){
+    if(!f)throw new Error("Adresse introuvable, précisez la ville.");
+    PLACES.push({address:f.properties.label,lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],kind:document.getElementById("placekind").value,label:document.getElementById("placelabel").value.trim()});
+    addr.value=""; document.getElementById("placelabel").value=""; say("savemsg",""); renderPlaces();
+  }).catch(function(err){say("savemsg",err.message,true);});
+};
+suggestAddresses(form.home,document.getElementById("addrs"),found);
+suggestAddresses(document.getElementById("placeaddr"),document.getElementById("addrs"),found);
+
+form.photo.onchange=function(){
+  shrink(form.photo.files[0]).then(function(p){PHOTO=p;showPhoto();});
+};
+function showPhoto(){var img=document.getElementById("photoprev");img.src=PHOTO||"";img.hidden=!PHOTO;}
+
+function collect(){
+  var q=form.home.value.trim();
+  return (q?resolveAddress(q,found):Promise.resolve(null)).then(function(f){
+    if(q&&!f)throw new Error("Adresse du domicile introuvable, précisez la ville.");
+    return {name:form.name.value.trim(),photo:PHOTO,description:form.description.value.trim(),habits:form.habits.value.trim(),medical:form.medical.value.trim(),
+      home:f?{label:f.properties.label,lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0]}:null,
+      places:PLACES,phone:form.phone.value.trim(),whatsapp:form.whatsapp.value.trim()};
+  });
+}
+function fill(d){
+  form.name.value=d.name||""; form.description.value=d.description||""; form.habits.value=d.habits||""; form.medical.value=d.medical||"";
+  form.phone.value=d.phone||""; form.whatsapp.value=d.whatsapp||"";
+  if(d.home){found[d.home.label]={properties:{label:d.home.label},geometry:{coordinates:[d.home.lng,d.home.lat]}};form.home.value=d.home.label;}
+  PLACES=d.places||[]; PHOTO=d.photo||""; renderPlaces(); showPhoto();
+  document.getElementById("title").textContent=d.name?"Fiche de "+d.name:"Fiche de préparation";
+  document.getElementById("printtitle").textContent=d.name?"Fiche Battue de "+d.name:"Fiche Battue";
+}
+function showSaved(){
+  document.getElementById("intro").hidden=true;
+  document.getElementById("launchbox").hidden=false;
+  document.getElementById("keysection").hidden=false;
+  document.getElementById("sheetlink").value=link();
+  ls("battue_fiche",link());
+}
+
+form.onsubmit=function(e){
+  e.preventDefault();
+  var btn=document.getElementById("save"); btn.disabled=true; say("savemsg","Chiffrement et enregistrement…");
+  collect().then(function(d){
+    fill(d);
+    return seal(d).then(function(data){
+      if(ID)return api("PUT","/api/f/"+ID,{data:data,version:VERSION}).then(function(j){VERSION=j.version;});
+      return fetch("/api/fiche",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:KEYS.token,data:data})})
+        .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||"Erreur "+r.status);return j;});})
+        .then(function(j){ID=j.id;VERSION=j.version;history.replaceState(null,"","/f/"+ID+"#k="+b64u(SECRET));});
+    });
+  }).then(function(){
+    btn.disabled=false; showSaved(); say("savemsg","Fiche enregistrée.");
+    document.getElementById("keysection").scrollIntoView({behavior:"smooth"});
+  }).catch(function(err){btn.disabled=false;say("savemsg",err.message,true);});
+};
+
+// Lancer : la fiche déchiffrée passe à la page de création par cet onglet, rien ne part en clair ailleurs
+document.getElementById("launch").onclick=function(){
+  collect().then(function(d){
+    var description=d.description+(d.habits?(d.description?"\n":"")+"Habitudes : "+d.habits:"");
+    sessionStorage.setItem("battue_prefill",JSON.stringify({name:d.name,photo:d.photo,description:description,phone:d.phone,whatsapp:d.whatsapp,home:d.home,
+      places:d.places.map(function(p){return {lat:p.lat,lng:p.lng,kind:p.kind,label:p.label};})}));
+    location.href="/nouvelle";
+  }).catch(function(err){say("savemsg",err.message,true);});
+};
+
+document.getElementById("copy").onclick=function(){
+  var b=this; (navigator.clipboard?navigator.clipboard.writeText(link()):Promise.reject()).then(function(){b.textContent="Lien copié";},function(){document.getElementById("sheetlink").select();});
+};
+document.getElementById("sharefamily").onclick=function(){
+  var name=form.name.value.trim();
+  var text="Fiche Battue"+(name?" de "+name:"")+" : en cas de disparition, appelez le 17, puis ouvrez ce lien et touchez « Lancer une battue maintenant ». Gardez-le précieusement, ne le diffusez pas.\n"+link();
+  window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener");
+};
+function loadScript(src,integrity){
+  return new Promise(function(ok,ko){var el=document.createElement("script");el.src=src;el.integrity=integrity;el.crossOrigin="anonymous";el.onload=ok;el.onerror=ko;document.head.appendChild(el);});
+}
+document.getElementById("printkey").onclick=function(){
+  var btn=this;
+  (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
+    var qr=qrcode(0,"M"); qr.addData(link()); qr.make();
+    var img=document.getElementById("printqr"); img.src=qr.createDataURL(8,2); img.hidden=false;
+    window.print();
+  },function(){btn.textContent="Pas de connexion, réessayez";});
+};
+document.getElementById("delete").onclick=function(){
+  var b=this;
+  if(!b.dataset.armed){b.dataset.armed=1;b.textContent="Confirmer : supprimer définitivement";b.classList.add("btn-primary");return;}
+  api("DELETE","/api/f/"+ID).then(function(){
+    try{if(localStorage.getItem("battue_fiche")===link())localStorage.removeItem("battue_fiche");}catch(e){}
+    location.href="/fiche";
+  }).catch(function(err){say("deletemsg",err.message,true);});
+};
+
+// Démarrage : nouvelle fiche, ou fiche existante à déchiffrer
+var match=location.pathname.match(/^\/f\/([a-z0-9]{10})/), hashKey=new URLSearchParams(location.hash.slice(1)).get("k");
+renderPlaces();
+if(match){
+  ID=match[1];
+  if(!hashKey){say("msg","Lien incomplet : il manque la clé de la fiche (la fin du lien, après #).",true);form.hidden=true;document.getElementById("intro").hidden=true;}
+  else{
+    try{SECRET=unb64u(hashKey);}catch(e){SECRET=new Uint8Array(0);}
+    form.hidden=true; say("msg","Déchiffrement de la fiche…");
+    deriveKeys(SECRET).then(function(k){KEYS=k;return api("GET","/api/f/"+ID);})
+      .then(function(j){VERSION=j.version;return unseal(j.data);})
+      .then(function(d){fill(d);form.hidden=false;showSaved();say("msg","");document.getElementById("save").textContent="Enregistrer les modifications";})
+      .catch(function(err){say("msg",err.name==="OperationError"?"Clé incorrecte : vérifiez que le lien est complet.":err.message,true);});
+  }
+}else{
+  SECRET=crypto.getRandomValues(new Uint8Array(32));
+  deriveKeys(SECRET).then(function(k){KEYS=k;});
+}
+</script>
+</body>
+</html>

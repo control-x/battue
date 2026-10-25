@@ -101,6 +101,13 @@
   </section>
 
   <section>
+    <h2>Préparer à l'avance</h2>
+    <p>Votre proche s'est déjà perdu, ou pourrait se perdre&nbsp;? Remplissez sa fiche au calme&nbsp;: photo, description, habitudes, anciens lieux de vie, endroits où on l'a déjà retrouvé. Le jour J, un seul geste lance la battue pré-remplie, et ces lieux apparaissent sur la carte comme à visiter en priorité.</p>
+    <p>La fiche est chiffrée sur votre téléphone&nbsp;: seules les personnes qui ont son lien peuvent la lire, pas même Battue.</p>
+    <p class="row-actions"><a class="btn" href="/fiche">Créer une fiche</a> <a class="btn" id="myfiche" hidden>Ouvrir la fiche enregistrée ici</a></p>
+  </section>
+
+  <section>
     <h2>Sans compte, sans trace</h2>
     <p>Pas d'application à installer ni de compte à créer&nbsp;: un lien suffit. Battue ne suit pas la personne disparue. Les données de la recherche sont supprimées à sa clôture, ou après 30 jours sans activité.</p>
     <p><a class="btn btn-primary" href="/nouvelle">Lancer une battue</a></p>
@@ -113,5 +120,9 @@
     <p><a href="mailto:contact@battue.org">contact@battue.org</a> · <a href="/confidentialite">Confidentialité</a> · <a href="/mentions-legales">Mentions légales</a></p>
   </footer>
 </main>
+<script>
+// Fiche déjà créée ou ouverte sur ce téléphone
+try{var fiche=localStorage.getItem("battue_fiche");if(fiche){var a=document.getElementById("myfiche");a.href=fiche;a.hidden=false;}}catch(e){}
+</script>
 </body>
 </html>

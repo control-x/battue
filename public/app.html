@@ -79,6 +79,8 @@
   .sw.alert{background:var(--grid)}
   .sw.prio{border:2px solid var(--ink);box-shadow:inset 0 0 0 2px var(--sheet),inset 0 0 0 3.5px var(--ink)}
   .sw.late{border:2px dashed var(--grid)}
+  .place{display:block;width:16px;height:16px;margin:3px;background:var(--ink);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--ink),0 2px 6px rgba(0,0,0,.35);transform:rotate(45deg)}
+  .place.small{display:inline-block;width:10px;height:10px;margin:0 3px;border-width:1.5px;box-shadow:0 0 0 1px var(--ink)}
   .chip{display:inline-flex;align-items:center;gap:.35rem;font-weight:800;font-stretch:85%;text-transform:uppercase;font-size:.85rem;letter-spacing:.02em}
 
   /* Fiches (popups Leaflet) en cartouche */
@@ -359,15 +361,27 @@ function buildGrid(lat,lng){
       rect.on("click",function(){openCell(id);});
       if(prio){var inset=.07;L.rectangle([[b[0][0]+(b[1][0]-b[0][0])*inset,b[0][1]+(b[1][1]-b[0][1])*inset],[b[1][0]-(b[1][0]-b[0][0])*inset,b[1][1]-(b[1][1]-b[0][1])*inset]],{color:INK,weight:1.5,opacity:.85,fill:false,interactive:false}).addTo(map);}
       cells[id]={rect:rect,lbl:lbl,center:ctr,b:b,prio:prio};
-    })(COLS[c]+(r+1),[[n-dLat,w],[n,w+dLng]],near<=PRIORITY_M);
+    })(COLS[c]+(r+1),[[n-dLat,w],[n,w+dLng]],near<=PRIORITY_M||hasPlace([[n-dLat,w],[n,w+dLng]]));
   }
   RINGS_M.forEach(function(m){L.circle([lat,lng],{radius:m,weight:1.5,color:INK,opacity:.55,dashArray:"5 7",fill:false,interactive:false}).addTo(map);});
   gridBounds=L.latLng(lat,lng).toBounds(2*PRIORITY_M*3);
   if(cells[focusId])map.fitBounds(cells[focusId].b,{padding:[30,30]});else map.fitBounds(gridBounds,{paddingTopLeft:[0,50]});
   L.circleMarker([lat,lng],{radius:10,color:"#fff",weight:3,fillColor:INK,fillOpacity:1}).addTo(map)
     .bindPopup('<div class="pop"><h3>'+icon("home")+'Point de départ</h3>'+esc(INFO.address)+(INFO.since?"<br>Vu(e) "+esc(fmtSince(INFO.since)):"")+'</div>');
+  drawPlaces();
   map.on("move zoom resize",renderMargins); renderMargins();
 }
+// Lieux du passé venus de la fiche de préparation : losanges noirs, leurs carreaux deviennent prioritaires
+var PLACE_KINDS={home:"Ancien domicile",found:"Déjà retrouvée ici",habit:"Lieu habituel"};
+function hasPlace(b){return (INFO.places||[]).some(function(p){return p.lat>=b[0][0]&&p.lat<b[1][0]&&p.lng>=b[0][1]&&p.lng<b[1][1];});}
+function drawPlaces(){
+  (INFO.places||[]).forEach(function(p){
+    L.marker([p.lat,p.lng],{icon:L.divIcon({className:"",html:'<i class="place"></i>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map)
+      .bindPopup('<div class="pop"><h3>'+esc(p.label||PLACE_KINDS[p.kind])+'</h3><div>'+esc(PLACE_KINDS[p.kind])+'</div><p><b>À visiter en priorité.</b></p></div>');
+  });
+  if((INFO.places||[]).length)document.querySelector(".keys").insertAdjacentHTML("beforeend",'<span><i class="place small"></i>Lieu du passé</span>');
+}
+
 // Index de marge vivant : la lettre de chaque colonne et le numéro de chaque ligne visibles, collés aux bords
 function renderMargins(){
   if(!colCenters.length)return;

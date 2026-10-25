@@ -17,6 +17,7 @@
 <h1>Lancer une battue</h1>
 <p class="urgence">Appelez d'abord le <a href="tel:17" aria-label="Appeler le 17">17</a> ou le <a href="tel:112" aria-label="Appeler le 112">112</a></p>
 <p class="msg" style="margin-top:-.5rem">Battue complète les secours, jamais à leur place.</p>
+<p class="cartouche" id="fromsheet" hidden style="margin:0 0 1rem;padding:.9rem 1rem"><b>Pré-remplie depuis la fiche<span id="fromsheetname"></span>.</b> Vérifiez l'adresse&nbsp;: est-ce bien le dernier lieu où elle a été vue&nbsp;? Les lieux du passé seront marqués sur la carte.</p>
 <form id="f">
   <fieldset>
     <legend>Où et quand</legend>
@@ -29,6 +30,7 @@
   <fieldset>
     <legend>La personne</legend>
     <label>Prénom<input name="name" autocomplete="off"></label>
+    <div id="sheetphotobox" hidden style="margin-bottom:.6rem"><img id="sheetphoto" alt="Photo de la fiche" style="max-height:140px;border:2px solid var(--ink)"></div>
     <label>Photo récente<span class="hint">Elle sera jointe au message et à l'affiche.</span><input name="photo" type="file" accept="image/*"></label>
     <label>Description et tenue<span class="hint">N'indiquez pas de diagnostic médical&nbsp;: la tenue et les habitudes suffisent.</span><textarea name="description" rows="4" placeholder="Âge, taille, cheveux, vêtements, habitudes…"></textarea></label>
   </fieldset>
@@ -45,31 +47,25 @@
   <p>Les données de la battue sont supprimées à sa clôture, ou après 30 jours sans activité. <a href="/confidentialite">Confidentialité</a> · <a href="/mentions-legales">Mentions légales</a></p>
 </footer>
 </main>
+<script src="/common.js"></script>
 <script>
 var form=document.getElementById("f"), msg=document.getElementById("msg"), found={};
 function say(t,isErr){msg.textContent=t;msg.className=isErr?"msg err":"msg";}
 // Adresse déjà saisie sur la page d'accueil
 form.address.value=new URLSearchParams(location.search).get("adresse")||"";
-// Suggestions d'adresses (Base Adresse Nationale), appelées depuis le navigateur
-var timer;
-form.address.oninput=function(){
-  clearTimeout(timer); var q=this.value.trim(); if(q.length<4||found[q])return;
-  timer=setTimeout(function(){geocode(q,5).then(function(fs){
-    document.getElementById("addrs").innerHTML=fs.map(function(f){found[f.properties.label]=f;return '<option value="'+f.properties.label.replace(/"/g,"&quot;")+'">';}).join("");
-  });},300);
-};
-function geocode(q,limit){
-  return fetch("https://api-adresse.data.gouv.fr/search/?limit="+limit+"&q="+encodeURIComponent(q)).then(function(r){return r.json();}).then(function(j){return j.features||[];});
-}
-// Photo réduite dans le navigateur : 800 px, JPEG
-function shrink(file){
-  if(!file)return Promise.resolve("");
-  return createImageBitmap(file).then(function(img){
-    var k=Math.min(1,800/Math.max(img.width,img.height)), c=document.createElement("canvas");
-    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
-    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    return c.toDataURL("image/jpeg",.75);
-  });
+suggestAddresses(form.address,document.getElementById("addrs"),found);
+
+// Lancement depuis une fiche de préparation : déjà déchiffrée par la page de la fiche, passée par cet onglet seulement
+var prefill=null;
+try{prefill=JSON.parse(sessionStorage.getItem("battue_prefill")||"null");sessionStorage.removeItem("battue_prefill");}catch(e){}
+if(prefill){
+  form.name.value=prefill.name||""; form.description.value=prefill.description||"";
+  form.phone.value=prefill.phone||""; form.whatsapp.value=prefill.whatsapp||"";
+  if(prefill.home){found[prefill.home.label]={properties:{label:prefill.home.label},geometry:{coordinates:[prefill.home.lng,prefill.home.lat]}};form.address.value=prefill.home.label;}
+  var now=new Date(Date.now()-new Date().getTimezoneOffset()*60000); form.since.value=now.toISOString().slice(0,16);
+  document.getElementById("fromsheet").hidden=false;
+  document.getElementById("fromsheetname").textContent=prefill.name?" de "+prefill.name:"";
+  if(prefill.photo){document.getElementById("sheetphoto").src=prefill.photo;document.getElementById("sheetphotobox").hidden=false;}
 }
 // Sur place : la position exacte du téléphone, avec l'adresse la plus proche pour l'affichage
 document.getElementById("here").onclick=function(){
@@ -90,12 +86,13 @@ form.onsubmit=function(e){
   e.preventDefault();
   var q=form.address.value.trim(), btn=form.querySelector("button[type=submit]");
   btn.disabled=true; say("Création…");
-  Promise.all([found[q]?[found[q]]:geocode(q,1),shrink(form.photo.files[0])]).then(function(r){
-    var f=r[0][0]; if(!f)throw new Error("Adresse introuvable, précisez la ville.");
+  Promise.all([resolveAddress(q,found),form.photo.files[0]?shrink(form.photo.files[0]):(prefill&&prefill.photo)||""]).then(function(r){
+    var f=r[0]; if(!f)throw new Error("Adresse introuvable, précisez la ville.");
     return fetch("/api/new",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       name:form.name.value.trim(), address:f.properties.label, lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0],
       since:form.since.value, sinceTs:form.since.value?new Date(form.since.value).getTime():null, description:form.description.value.trim(), phone:form.phone.value.trim(),
-      whatsapp:form.whatsapp.value.trim(), photo:r[1], police:form.police.checked})});
+      whatsapp:form.whatsapp.value.trim(), photo:r[1], police:form.police.checked,
+      places:prefill?prefill.places:[], fromSheet:!!prefill})});
   }).then(function(res){return res.json().then(function(j){if(!res.ok)throw new Error(j.error||"Erreur "+res.status);return j;});})
     .then(function(j){location.href="/r/"+j.id+"#c="+j.coord+"&new";})
     .catch(function(err){btn.disabled=false;say(err.message==="Failed to fetch"?"Pas de connexion internet, réessayez.":err.message,true);});

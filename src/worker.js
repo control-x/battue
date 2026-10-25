@@ -6,6 +6,7 @@
 // POST /api/new {name,address,lat,lng,since,description,phone,whatsapp,photo,police} -> {id,coord,vol}
 // Sous /api/r/<id>, avec Authorization: Bearer <jeton> :
 // GET  /state            -> {role, info, secteurs:{A1:{s,e,n,d,f,ds,t}}, points:[{id,lat,lng,txt,t,who}]}
+// GET  /log              -> {log:[{t,txt}]} journal horodaté, coordinateur seulement
 // GET  /photo            -> {photo: "data:image/jpeg;base64,…"}
 // GET  /ws               -> websocket : envoyer "auth <jeton>", puis reçoit l'état à chaque changement
 // POST /sector  {id,s,e,n,d,f}  correction manuelle, coordinateur seulement ; d/f : heures "HH:MM"
@@ -28,6 +29,7 @@ const validId = (id) => /^[A-Z]\d{1,2}$/.test(id || "");
 const randomToken = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 const randomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
+const STATUS_LABELS = { todo: "à faire", doing: "en cours", done: "fait", alert: "signalement / à refaire" };
 const IDLE_MS = 30 * 24 * 3600 * 1000;
 const NO_VOLUNTEER_MS = 30 * 60 * 1000;
 const GONE = { error: "Recherche introuvable ou clôturée" };
@@ -75,9 +77,15 @@ export class Search extends DurableObject {
     return { info: this.meta.info, secteurs, points, now: Date.now() };
   }
 
-  async save(event) {
+  // entry : ligne du journal horodaté (exportable pour la police), gardé à part car jamais diffusé
+  async save(event, entry) {
     this.state.t = Date.now();
     await this.ctx.storage.put("state", this.state);
+    if (entry) {
+      const log = (await this.ctx.storage.get("log")) || [];
+      log.push({ t: this.state.t, txt: entry });
+      await this.ctx.storage.put("log", log);
+    }
     await this.scheduleAlarm();
     stat(this.env, event, this.meta.info.test);
     const msg = JSON.stringify(this.publicState());
@@ -116,7 +124,7 @@ export class Search extends DurableObject {
       this.meta = meta;
       await this.ctx.storage.put("meta", meta);
       if (photo) await this.ctx.storage.put("photo", photo);
-      await this.save("create");
+      await this.save("create", "Battue créée, départ : " + meta.info.address + (meta.info.since ? ", vue le " + meta.info.since.replace("T", " à ") : ""));
       return json({ ok: true });
     }
     if (!this.meta) return json(GONE, 404);
@@ -135,6 +143,10 @@ export class Search extends DurableObject {
     const isAdmin = role === "coord";
 
     if (req.method === "GET" && url.pathname === "/state") return json({ role, ...this.publicState(), ...(isAdmin && { vol: this.meta.vol }) });
+    if (req.method === "GET" && url.pathname === "/log") {
+      if (!isAdmin) return json({ error: "admin" }, 403);
+      return json({ log: (await this.ctx.storage.get("log")) || [] });
+    }
     if (req.method === "GET" && url.pathname === "/photo") return json({ photo: (await this.ctx.storage.get("photo")) || "" });
 
     if (req.method !== "POST") return json({ error: "not found" }, 404);
@@ -164,7 +176,9 @@ export class Search extends DurableObject {
         meta = { ...cur, s: "done", n: b.n == null ? cur.n : clip(b.n, 300), f: nowParis(), t: Date.now() };
       }
       this.state.secteurs[b.id] = meta;
-      await this.save("sector");
+      await this.save("sector", meta.s === "doing"
+        ? `Secteur ${b.id} commencé par ${meta.e}` + (meta.p ? ` (prévu ${meta.p} min)` : "")
+        : `Secteur ${b.id} terminé par ${meta.e}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       const { o, ...pub } = meta;
       return json({ ok: true, meta: pub });
     }
@@ -176,7 +190,7 @@ export class Search extends DurableObject {
       if (!hhmm(b.d) || !hhmm(b.f)) return json({ error: "Indiquez l'heure de début et de fin" }, 400);
       const meta = { s: "done", e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
       this.state.secteurs[b.id] = meta;
-      await this.save("sector");
+      await this.save("sector", `Secteur ${b.id} déclaré fait par ${meta.e}, de ${meta.d} à ${meta.f}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       return json({ ok: true, meta });
     }
     if (url.pathname === "/sector") {
@@ -185,20 +199,23 @@ export class Search extends DurableObject {
       if (!["todo", "doing", "done", "alert"].includes(b.s)) return json({ error: "s" }, 400);
       const meta = { s: b.s, e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
       this.state.secteurs[b.id] = meta;
-      await this.save("sector");
+      await this.save("sector", `Secteur ${b.id} corrigé par le coordinateur : ${STATUS_LABELS[b.s]}` + (meta.e ? `, ${meta.e}` : "") + (meta.n ? ` ; note : ${meta.n}` : ""));
       return json({ ok: true, meta });
     }
     if (url.pathname === "/point") {
       const lat = +b.lat, lng = +b.lng;
       if (!isFinite(lat) || !isFinite(lng)) return json({ error: "pos" }, 400);
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      this.state.points[id] = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), t: Date.now() };
-      await this.save("point");
+      const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), t: Date.now() };
+      this.state.points[id] = point;
+      await this.save("point", `Signalement${point.who ? " de " + point.who : ""} à ${lat.toFixed(5)}, ${lng.toFixed(5)} : ${point.txt}`);
       return json({ ok: true, id });
     }
     if (url.pathname === "/point/delete") {
+      const point = this.state.points[clip(b.id, 40)];
+      if (!point) return json({ ok: true });
       delete this.state.points[clip(b.id, 40)];
-      await this.save("point-delete");
+      await this.save("point-delete", `Signalement retiré (traité) : ${point.txt}`);
       return json({ ok: true });
     }
     return json({ error: "not found" }, 404);
@@ -274,6 +291,8 @@ async function selfTest(env) {
   expect((await call(`/api/r/${id}/state`, "faux")).status === 403, "jeton refusé");
   expect((await call(`/api/r/${id}/sector/start`, vol, { id: "G7", e: "Test", o: "robot" })).body.meta?.s === "doing", "secteur commencé");
   expect((await call(`/api/r/${id}/point`, vol, { lat: 48.85, lng: 2.35, txt: "test" })).status === 200, "signalement");
+  expect((await call(`/api/r/${id}/log`, coord)).body.log?.length === 3, "journal");
+  expect((await call(`/api/r/${id}/log`, vol)).status === 403, "journal refusé au bénévole");
   expect((await call(`/api/r/${id}/close`, vol, {})).status === 403, "clôture refusée au bénévole");
   expect((await call(`/api/r/${id}/close`, coord, {})).status === 200, "clôture");
   expect((await call(`/api/r/${id}/state`, coord)).status === 404, "données supprimées");

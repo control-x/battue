@@ -51,6 +51,20 @@
   .rules{padding-left:20px;margin:8px 0}
   .rules li{margin:4px 0}
   #sum.late{color:#c01818}
+  #clock{font-weight:600}
+  #poster{display:none}
+  @media print{
+    @page{margin:12mm}
+    body{overflow:visible;height:auto}
+    body>*:not(#poster){display:none!important}
+    #poster{display:block;text-align:center;font-family:system-ui,sans-serif;color:#000}
+    #poster h1{font-size:44px;margin:0 0 6px;color:#c01818}
+    #poster img.photo{max-width:100%;max-height:95mm;border-radius:4px}
+    #poster .desc{font-size:18px;white-space:pre-wrap;margin:8px 0}
+    #poster .call{font-size:30px;font-weight:800;margin:10px 0}
+    #poster .qr{display:flex;gap:16px;align-items:center;justify-content:center;text-align:left;font-size:15px}
+    #poster .qr img{width:38mm;height:38mm;image-rendering:pixelated}
+  }
   #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:18px}
   @media (max-width:520px){
@@ -76,6 +90,7 @@
 </div>
 <button id="sig" class="red" type="button">⚠️ Signaler</button>
 <div class="legend card">
+  <div id="clock"></div>
   <div id="info" style="font-weight:600">Touchez un carré</div>
   <div id="sum" hidden></div>
   <div id="list" hidden></div>
@@ -102,8 +117,18 @@
     <li>Jamais de berge seul, ni la nuit.</li>
     <li>Commencez votre secteur sur la carte en partant, terminez-le en rentrant.</li>
   </ul>
+  <button id="print" type="button">🖨 Imprimer l'affiche (PDF)</button>
   <form method="dialog"><button>Fermer</button></form>
 </dialog>
+
+<section id="poster">
+  <h1 id="pname"></h1>
+  <img id="pphoto" class="photo" alt="" hidden>
+  <p id="psince" class="desc"></p>
+  <p id="pdesc" class="desc"></p>
+  <p id="pcall" class="call"></p>
+  <div class="qr"><img id="pqr" alt=""><div>Pour aider à la recherche,<br>scannez ce code : carte des secteurs<br>et consignes pour les bénévoles.</div></div>
+</section>
 
 <dialog id="dwelcome">
   <h2>Merci de nous aider</h2>
@@ -130,8 +155,10 @@
   <label><b>Votre lien coordinateur</b> : gardez-le, ne le partagez pas<input id="coordLink" readonly></label>
   <button id="cpCoord" type="button">Copier le lien coordinateur</button>
   <hr>
+  <button id="journal" type="button">📄 Exporter le journal (pour la police)</button>
+  <hr>
   <button id="close" class="red" type="button">Clôturer la recherche</button>
-  <div class="msg" id="closemsg">La clôture supprime toutes les données de la recherche.</div>
+  <div class="msg" id="closemsg">La clôture supprime toutes les données de la recherche, journal compris : exportez-le avant.</div>
   <form method="dialog"><button>Fermer</button></form>
 </dialog>
 
@@ -341,7 +368,7 @@ function paint(){
     var sub=s.s==="doing"?"▶ "+esc(s.d||""):s.s==="done"?"✓ "+esc(s.d||"")+"–"+esc(s.f||""):"";
     cells[id].lbl.setIcon(L.divIcon({className:"",html:'<div class="lbl">'+id+(sub?"<small>"+sub+"</small>":"")+(s.e&&s.s!=="todo"?"<small>"+esc(s.e)+"</small>":"")+"</div>",iconSize:[90,46],iconAnchor:[45,23]}));
   });
-  renderList();
+  renderList(); renderClock();
 }
 function drawPoints(points){
   pointsLayer.clearLayers();
@@ -370,6 +397,7 @@ function setup(){
   }).catch(function(){});
   if(ROLE==="coord")setupCoordinator();
   buildGrid(INFO.lat,INFO.lng);
+  loadWeather();
   if(ROLE==="vol"&&!ls("battue_team_"+SEARCH_ID))welcome();
   else if(cells[focusId])openCell(focusId);
 }
@@ -414,6 +442,42 @@ setInterval(paint,60000); // durées « depuis … » et retards
 document.getElementById("home").onclick=function(){if(INFO)map.setView([INFO.lat,INFO.lng],17);};
 document.getElementById("avis").onclick=function(){document.getElementById("davis").showModal();};
 
+// Bandeau : temps écoulé, tombée de la nuit et température (Open-Meteo, sans clé)
+var weather=null;
+function loadWeather(){
+  fetch("https://api.open-meteo.com/v1/forecast?latitude="+INFO.lat+"&longitude="+INFO.lng+"&current=temperature_2m&daily=sunrise,sunset,temperature_2m_min&timezone=auto&forecast_days=2")
+    .then(function(r){return r.json();}).then(function(j){weather=j;renderClock();}).catch(function(){});
+}
+function renderClock(){
+  if(!INFO)return;
+  var start=INFO.since?new Date(INFO.since).getTime():INFO.created, parts=["⏱ Disparu(e) depuis "+since(start)];
+  if(weather&&weather.daily){
+    var d=weather.daily, now=Date.now(), sunset=new Date(d.sunset[0]).getTime(), sunrise=new Date(d.sunrise[1]).getTime();
+    parts.push(now<sunset?"🌙 Nuit à "+hhmm(sunset):now<sunrise?"🌙 Nuit, jour à "+hhmm(sunrise):"");
+    parts.push("🌡 "+Math.round(weather.current.temperature_2m)+"° (min "+Math.round(Math.min.apply(null,d.temperature_2m_min))+"°)");
+  }
+  document.getElementById("clock").textContent=parts.filter(Boolean).join(" · ");
+}
+
+// Affiche imprimable (ou enregistrée en PDF depuis la fenêtre d'impression), avec un QR code vers la carte
+function loadScript(src,integrity){
+  return new Promise(function(ok,ko){var el=document.createElement("script");el.src=src;el.integrity=integrity;el.crossOrigin="anonymous";el.onload=ok;el.onerror=ko;document.head.appendChild(el);});
+}
+document.getElementById("print").onclick=function(){
+  var btn=this;
+  (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
+    var qr=qrcode(0,"M"); qr.addData(volLink()); qr.make();
+    document.getElementById("pqr").src=qr.createDataURL(8,2);
+    document.getElementById("pname").textContent=INFO.name?"Avez-vous vu "+INFO.name+" ?":"Personne disparue";
+    var photo=document.getElementById("aphoto"), pphoto=document.getElementById("pphoto");
+    pphoto.src=photo.src; pphoto.hidden=photo.hidden;
+    document.getElementById("psince").textContent=document.getElementById("asince").textContent;
+    document.getElementById("pdesc").textContent=INFO.description;
+    document.getElementById("pcall").textContent=INFO.phone?"📞 "+INFO.phone:"Prévenez le 17";
+    window.print();
+  },function(){btn.textContent="Pas de connexion, réessayez";});
+};
+
 // Accueil du bénévole à sa première visite : prénoms du binôme et consignes, puis son secteur s'il en a reçu un
 function welcome(){
   var dlg=document.getElementById("dwelcome"), who=document.getElementById("wwho");
@@ -454,6 +518,18 @@ function setupCoordinator(){
       if(!navigator.canShare(data))return wa();
       return navigator.share(data).catch(function(){});
     }).catch(wa);
+  };
+  document.getElementById("journal").onclick=function(){
+    var btn=this;
+    fetch(API+"/log",{headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){return r.json();}).then(function(j){
+      var day=function(t){return new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});};
+      var text="Journal de la battue"+(INFO.name?" pour retrouver "+INFO.name:"")+"\nExporté le "+day(Date.now())+"\n\n"+
+        j.log.map(function(e){return day(e.t)+"  "+e.txt;}).join("\n")+"\n";
+      var a=document.createElement("a");
+      a.href=URL.createObjectURL(new Blob([text],{type:"text/plain;charset=utf-8"}));
+      a.download="journal-battue-"+SEARCH_ID+".txt"; a.click();
+      btn.textContent="📄 Journal exporté";
+    }).catch(function(){btn.textContent="Pas de connexion, réessayez";});
   };
   var closeBtn=document.getElementById("close"), armed=false;
   closeBtn.onclick=function(){

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confidentialité – Battue</title>
+<meta name="description" content="Quelles données Battue utilise, combien de temps elles sont gardées, et comment les faire supprimer.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>Battue</a>
+</header>
+<main class="page">
+  <h1>Confidentialité</h1>
+  <p>Battue sert à coordonner une battue pendant quelques heures ou quelques jours. Il garde le moins de données possible, et les efface à la fin.</p>
+
+  <section>
+    <h2>Ce qu'une battue contient</h2>
+    <ul class="reflexes">
+      <li><b>La fiche saisie par le coordinateur</b>&nbsp;: prénom, photo et description de la personne recherchée, dernier lieu connu, heure, numéro à appeler, lien du groupe WhatsApp.</li>
+      <li><b>L'avancement</b>&nbsp;: pour chaque carreau, le prénom du binôme, les heures et les notes.</li>
+      <li><b>Les signalements</b>&nbsp;: leur position, leur texte et, si on l'indique, un prénom.</li>
+      <li><b>Le journal</b> de ces actions, que le coordinateur peut exporter pour la police ou la gendarmerie.</li>
+    </ul>
+    <p>Ces données ne sont visibles qu'avec les liens de la battue. Elles sont hébergées chez Cloudflare, avec un stockage contraint à l'Union européenne.</p>
+    <p>N'indiquez pas de diagnostic médical&nbsp;: une description de la tenue et des habitudes suffit pour chercher.</p>
+  </section>
+
+  <section>
+    <h2>Combien de temps</h2>
+    <p>Tout est supprimé quand le coordinateur clôture la recherche, ou automatiquement après 30 jours sans activité. L'administrateur peut aussi fermer une battue, par exemple après un signalement d'abus&nbsp;; ses données sont alors supprimées de la même façon.</p>
+  </section>
+
+  <section>
+    <h2>Ce qui reste après une battue</h2>
+    <p>Un résumé anonyme, pour mesurer l'utilité de Battue&nbsp;: le jour, le département, la durée, des nombres (téléphones de bénévoles, binômes, carreaux fouillés, signalements) et, si le coordinateur répond, si la personne a été retrouvée. Il ne contient ni nom, ni adresse, ni position, ni photo, ni lien vers la battue.</p>
+    <p>Des compteurs techniques (battues créées, erreurs) servent aussi à vérifier que le service fonctionne. Ils ne contiennent rien de ce qui a été saisi.</p>
+  </section>
+
+  <section>
+    <h2>Sur votre téléphone</h2>
+    <p>Battue garde dans votre navigateur le lien de la battue, votre prénom et un identifiant aléatoire de l'appareil, pour vous éviter de les ressaisir et pour savoir quel téléphone a commencé un carreau. Il n'y a pas de cookie, pas de compte, pas de publicité ni de mesure d'audience.</p>
+    <p>Votre position reste sur votre téléphone&nbsp;: elle n'est envoyée que si vous faites un signalement à votre position.</p>
+  </section>
+
+  <section>
+    <h2>Services appelés par votre navigateur</h2>
+    <p>Pour fonctionner, la page contacte directement quelques services, qui voient votre adresse IP&nbsp;:</p>
+    <ul class="reflexes">
+      <li><b>OpenStreetMap</b>, pour le fond de carte.</li>
+      <li><b>La Base Adresse Nationale</b>, pour retrouver l'adresse saisie.</li>
+      <li><b>Open-Meteo</b>, pour l'heure de la nuit et la température au point de départ.</li>
+      <li><b>unpkg et cdnjs</b>, qui fournissent les bibliothèques de carte et de QR code.</li>
+      <li><b>WhatsApp</b>, seulement si vous partagez un lien ou une affiche.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Vos droits</h2>
+    <p>Le responsable de ces données est Damien Cirotteau. Pour toute question, ou pour demander la suppression d'une battue, écrivez à <a href="mailto:contact@battue.org">contact@battue.org</a> en indiquant son code (les 6 caractères après /r/ dans le lien). Vous pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes">CNIL</a>.</p>
+  </section>
+
+  <footer class="imprint">
+    <p><a href="/">Accueil</a> · <a href="/mentions-legales">Mentions légales</a></p>
+  </footer>
+</main>
+</body>
+</html>

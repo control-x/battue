@@ -4,6 +4,7 @@
 // l'en-tête Authorization (ils voyagent dans la partie # du lien, jamais dans l'URL côté serveur).
 //
 // POST /api/new {name,address,lat,lng,since,description,phone,whatsapp,photo,police} -> {id,coord,vol}
+// POST /api/report {id,reason} -> signalement d'abus, transmis à l'admin par ntfy
 // Sous /api/r/<id>, avec Authorization: Bearer <jeton> :
 // GET  /state            -> {role, info, secteurs:{A1:{s,e,n,d,f,ds,t}}, points:[{id,lat,lng,txt,t,who}]}
 // GET  /log              -> {log:[{t,txt}]} journal horodaté, coordinateur seulement
@@ -393,6 +394,7 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
+  if (url.pathname === "/api/report" && req.method === "POST") return reportAbuse(req, env);
   if (url.pathname.startsWith("/api/admin/")) {
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
     if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
@@ -432,6 +434,18 @@ async function adminStats(env) {
   } catch (err) {
     return json({ error: err.message }, 502);
   }
+}
+
+// Signalement d'abus depuis une carte : l'admin est prévenu (ntfy) avec le code, puis ferme la battue depuis /admin.
+// ponytail: aucune limite d'envoi ; en ajouter une si quelqu'un en abuse.
+async function reportAbuse(req, env) {
+  let body;
+  try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+  const id = String(body.id || "");
+  if (!/^[a-z0-9]{6}$/.test(id)) return json({ error: "Code de battue invalide" }, 400);
+  stat(env, "abuse-report");
+  await notify(env, `Battue : signalement d'abus sur la battue ${id}. Motif : ${clip(body.reason, 500) || "non précisé"}. Fermer : https://www.battue.org/admin`);
+  return json({ ok: true });
 }
 
 // Battues ouvertes, avec leurs nombres ; une battue déjà effacée est retirée du registre au passage

@@ -187,14 +187,14 @@ document.getElementById("csv").onclick=function(){
 };
 
 // Compteurs (Analytics Engine)
-var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["selftest-ko","Tests automatiques en échec"]];
+var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["abuse-report","Signalements d'abus"],["selftest-ko","Tests automatiques en échec"]];
 function loadCounters(){
   var box=document.getElementById("counters");
   api("stats").then(function(j){
     var periods=Object.keys(j.periods), ok=j.selftest["selftest-ok"]||0, ko=j.selftest["selftest-ko"]||0, healthy=ok>ko&&Date.now()-ok<2*3600e3;
     box.innerHTML='<p class="status'+(healthy?'':' ko')+'"><i></i>Test automatique : '+(healthy?"OK, dernier passage "+when(ok):"en échec ou absent depuis "+when(Math.max(ok,ko)))+'</p>'+
       '<div class="scroll"><table><thead><tr><th>Événement</th>'+periods.map(function(p){return "<th>"+esc(p)+"</th>";}).join("")+'</tr></thead><tbody>'+
-      ROWS.map(function(row){return '<tr><td>'+row[1]+'</td>'+periods.map(function(p){var n=j.periods[p][row[0]]||0;return '<td'+((row[0]==="selftest-ko"||row[0]==="no-volunteer")&&n?' class="warn"':'')+'>'+n+'</td>';}).join("")+'</tr>';}).join("")+
+      ROWS.map(function(row){return '<tr><td>'+row[1]+'</td>'+periods.map(function(p){var n=j.periods[p][row[0]]||0;return '<td'+((row[0]==="selftest-ko"||row[0]==="no-volunteer"||row[0]==="abuse-report")&&n?' class="warn"':'')+'>'+n+'</td>';}).join("")+'</tr>';}).join("")+
       '</tbody></table></div>';
   }).catch(function(err){fail(box,err);});
 }

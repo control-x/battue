@@ -30,7 +30,7 @@
     <legend>La personne</legend>
     <label>Prénom<input name="name" autocomplete="off"></label>
     <label>Photo récente<span class="hint">Elle sera jointe au message et à l'affiche.</span><input name="photo" type="file" accept="image/*"></label>
-    <label>Description et tenue<textarea name="description" rows="4" placeholder="Âge, taille, cheveux, vêtements, habitudes…"></textarea></label>
+    <label>Description et tenue<span class="hint">N'indiquez pas de diagnostic médical&nbsp;: la tenue et les habitudes suffisent.</span><textarea name="description" rows="4" placeholder="Âge, taille, cheveux, vêtements, habitudes…"></textarea></label>
   </fieldset>
   <fieldset>
     <legend>Contacts</legend>
@@ -41,6 +41,9 @@
   <button class="btn btn-primary btn-block btn-big submit" type="submit">Créer la battue</button>
   <p id="msg" class="msg" role="status"></p>
 </form>
+<footer class="imprint">
+  <p>Les données de la battue sont supprimées à sa clôture, ou après 30 jours sans activité. <a href="/confidentialite">Confidentialité</a> · <a href="/mentions-legales">Mentions légales</a></p>
+</footer>
 </main>
 <script>
 var form=document.getElementById("f"), msg=document.getElementById("msg"), found={};

@@ -226,6 +226,16 @@
   <button id="poster-img" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-send"/></svg>Partager l'affiche (image)</button>
   <button id="print" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-printer"/></svg>Imprimer l'affiche (PDF)</button>
   <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
+  <p class="msg"><a href="#" id="abuselink">Signaler un abus</a> · <a href="/confidentialite" target="_blank" rel="noopener">Confidentialité</a></p>
+</dialog>
+
+<dialog id="dabuse">
+  <h2>Signaler un abus</h2>
+  <p>Cette battue vous semble servir à rechercher quelqu'un contre son gré, ou à autre chose qu'une disparition&nbsp;? L'administrateur est prévenu et peut la fermer.</p>
+  <label>Ce qui vous inquiète<span class="hint">Facultatif. N'indiquez pas votre nom.</span><textarea id="abusereason" rows="3"></textarea></label>
+  <button id="abusesend" class="btn btn-primary" type="button">Envoyer le signalement</button>
+  <p class="msg" id="abusemsg" role="status"></p>
+  <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
 </dialog>
 
 <section id="poster">
@@ -588,6 +598,18 @@ setInterval(paint,60000); // durées « depuis … » et retards
 
 document.getElementById("home").onclick=function(){if(INFO)map.setView([INFO.lat,INFO.lng],17);};
 document.getElementById("avis").onclick=function(){document.getElementById("davis").showModal();};
+
+// Signalement d'abus : seul le code de la battue et le motif partent, vers l'administrateur
+document.getElementById("abuselink").onclick=function(e){
+  e.preventDefault(); document.getElementById("davis").close(); document.getElementById("dabuse").showModal();
+};
+document.getElementById("abusesend").onclick=function(){
+  var btn=this, msg=document.getElementById("abusemsg");
+  btn.disabled=true; msg.className="msg"; msg.textContent="Envoi…";
+  fetch("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:SEARCH_ID,reason:document.getElementById("abusereason").value.trim()})})
+    .then(function(r){if(!r.ok)throw new Error();msg.textContent="Merci, l'administrateur est prévenu.";})
+    .catch(function(){btn.disabled=false;msg.className="msg err";msg.textContent="Échec de l'envoi. Écrivez à contact@battue.org avec le code "+SEARCH_ID+".";});
+};
 
 // Bandeau : temps écoulé, tombée de la nuit et température (Open-Meteo, sans clé)
 var weather=null;

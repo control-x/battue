@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "public/nouvelle.html"
+        ],
+        "createdAt": "2026-10-25T21:48:58.734Z",
+        "reason": "Claude, confirmed by the finish reviewer: photo/QR <img> stay hidden until their src is set at runtime"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "public/fiche.html"
+        ],
+        "createdAt": "2026-10-25T21:48:58.752Z",
+        "reason": "Claude, confirmed by the finish reviewer: photo/QR <img> stay hidden until their src is set at runtime"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "public/app.html"
+        ],
+        "createdAt": "2026-10-25T21:48:58.773Z",
+        "reason": "Claude, confirmed by the finish reviewer: photo/QR <img> stay hidden until their src is set at runtime"
+      }
+    ]
+  }
+}

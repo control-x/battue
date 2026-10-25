@@ -1,15 +1,151 @@
-body{margin:0;font:17px/1.5 system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#fff}
-main{max-width:640px;margin:0 auto;padding:16px}
-h1{font-size:28px;line-height:1.2;margin:16px 0}
-h2{font-size:21px;margin:32px 0 8px}
-a{color:#1f5f8b}
-.alert{background:#fdecea;border:1px solid #e8b4b0;padding:10px 12px;border-radius:8px}
-.cta,button{display:inline-block;font:inherit;font-weight:700;border:0;border-radius:8px;padding:14px 20px;background:#c01818;color:#fff;text-decoration:none;cursor:pointer}
-button:disabled{opacity:.6}
-button.secondary{background:#fff;color:#1f5f8b;border:1px solid #1f5f8b;padding:10px 14px;font-weight:600}
-label{display:block;margin:12px 0;font-weight:600}
-input,textarea{display:block;width:100%;box-sizing:border-box;font:16px system-ui;margin-top:4px;padding:10px;border:1px solid #888;border-radius:6px}
-label.check{display:flex;gap:10px;align-items:flex-start;font-weight:400}
-label.check input{width:auto;margin-top:5px}
-ol li,ul li{margin:6px 0}
-footer{color:#555;font-size:14px;margin-top:40px;border-top:1px solid #ddd;padding-top:12px}
+/* Battue : le plan de ville quadrillé. Papier blanc, carroyage rouge, rues saumon, axes jaunes, eau, parcs. */
+@font-face{font-family:Archivo;src:url(/fonts/archivo-latin.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Archivo;src:url(/fonts/archivo-latin-ext.woff2) format("woff2");font-weight:100 900;font-stretch:62% 125%;font-display:swap;unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+:root{
+  --paper:#f8f9f7;
+  --sheet:#ffffff;
+  --ink:#141414;
+  --ink-2:#424242;
+  --grid:#c8102e;
+  --grid-soft:rgba(200,16,46,.28);
+  --street:#f2a38a;
+  --road:#f5c842;
+  --water:#7fb8e2;
+  --park:#b9dc9f;
+  --park-ink:#2c7a3a;
+  --wa:#1d7f45;
+  --focus:#1f5fbf;
+  --cell:64px;
+  --margin:28px;
+  --shadow:0 6px 18px rgba(20,20,20,.18);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:400 1.125rem/1.5 Archivo,system-ui,sans-serif;color:var(--ink);background:var(--paper);caret-color:var(--grid)}
+::selection{background:var(--road);color:var(--ink)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+a{color:var(--ink);text-decoration-color:var(--grid);text-decoration-thickness:2px;text-underline-offset:3px}
+img{max-width:100%}
+
+/* Voix du plan : grotesque condensée en capitales */
+h1{font:800 clamp(2.5rem,10vw,4.5rem)/.95 Archivo,system-ui,sans-serif;font-stretch:66%;text-transform:uppercase;letter-spacing:-.005em;text-wrap:balance;margin:0}
+h2{font:800 1.9rem/1.05 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 1rem;text-wrap:balance}
+
+/* Icônes au trait */
+.i{width:1.25em;height:1.25em;flex:none}
+
+/* Boutons : étiquettes de plan, filet noir */
+.btn,button{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:.6em 1.1em;font:700 1.05rem/1.1 Archivo,system-ui,sans-serif;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;color:var(--ink);background:var(--sheet);border:2px solid var(--ink);border-radius:3px;cursor:pointer;text-decoration:none;transition:background-color .15s ease-out,transform .15s ease-out}
+.btn:active,button:active{transform:translateY(1px)}
+.btn:hover,button:hover{background:#efefea}
+.btn-primary{background:var(--grid);border-color:var(--grid);color:#fff}
+.btn-primary:hover{background:#a50d26}
+.btn-wa{background:var(--wa);border-color:var(--wa);color:#fff}
+.btn-wa:hover{background:#166637}
+.btn-block{display:flex;width:100%}
+.btn-big{min-height:58px;font-size:1.25rem}
+button:disabled{opacity:.55;cursor:progress}
+
+/* Champs */
+label{display:block;font-weight:700;margin:0 0 1.1rem}
+label .hint{display:block;font-weight:400;color:var(--ink-2);font-size:1rem}
+input,textarea,select{display:block;width:100%;margin-top:.35rem;padding:.7rem .8rem;font:400 1.125rem/1.3 Archivo,system-ui,sans-serif;color:var(--ink);background:var(--sheet);border:2px solid var(--ink);border-radius:3px}
+input[type=file]{padding:.55rem;font-size:1rem}
+input[type=file]::file-selector-button{margin-right:.75rem;padding:.45rem .8rem;font:700 .95rem/1 Archivo,system-ui,sans-serif;font-stretch:80%;text-transform:uppercase;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:3px;cursor:pointer}
+input::placeholder,textarea::placeholder{color:#6b6b6b}
+input:focus,textarea:focus,select:focus{outline:3px solid var(--focus);outline-offset:1px}
+label.check{display:flex;gap:.75rem;align-items:flex-start;font-weight:600}
+label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--grid)}
+
+/* Cartouche : le cadre blanc à filet noir posé sur le plan */
+.cartouche{background:var(--sheet);border:2px solid var(--ink);box-shadow:var(--shadow);padding:1.25rem}
+
+/* Appel d'urgence : les numéros sont des boutons d'appel */
+.urgence{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin:.75rem 0 .9rem;font-weight:700}
+.urgence a{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 .7rem;border:2px solid var(--grid);border-radius:999px;color:var(--grid);font-weight:800;font-size:1.3rem;text-decoration:none;font-variant-numeric:tabular-nums}
+.urgence a:hover{background:var(--grid);color:#fff}
+
+.msg{color:var(--ink-2);font-size:1rem;margin:.5rem 0 0;min-height:1.5em}
+.msg.err{color:var(--grid);font-weight:700}
+
+/* Marque : un carreau du plan, hachuré et surligné, et le nom */
+.brand{display:inline-flex;align-items:center;gap:.55rem;font:800 1.5rem/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;letter-spacing:.03em;text-decoration:none;color:var(--ink)}
+.brand-mark{width:26px;height:26px;border:2px solid var(--ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:none}
+.brand-mark span{border:1px solid var(--grid-soft)}
+.brand-mark span:nth-child(2){background:repeating-linear-gradient(45deg,var(--park-ink) 0 2px,transparent 2px 5px)}
+.brand-mark span:nth-child(3){background:var(--road)}
+
+/* ---------- Accueil : le plan déplié ---------- */
+.plan{position:relative;min-height:100svh;padding:var(--margin);background:var(--sheet);display:flex;flex-direction:column;justify-content:space-between}
+.plan-frame{position:absolute;inset:var(--margin);border:2px solid var(--ink);overflow:hidden;background:var(--paper) url(/plan.svg) center/cover no-repeat}
+.plan-frame::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(var(--cell) - 1px),var(--grid-soft) calc(var(--cell) - 1px) var(--cell)),repeating-linear-gradient(transparent 0 calc(var(--cell) - 1px),var(--grid-soft) calc(var(--cell) - 1px) var(--cell))}
+.margin-cols,.margin-rows{position:absolute;display:flex;color:var(--grid);font:700 .9rem/1 Archivo,system-ui,sans-serif;font-stretch:80%;overflow:hidden}
+.margin-cols{left:var(--margin);right:var(--margin);top:0;height:var(--margin)}
+.margin-cols.bottom{top:auto;bottom:0}
+.margin-rows{top:var(--margin);bottom:var(--margin);left:0;width:var(--margin);flex-direction:column}
+.margin-rows.right{left:auto;right:0}
+.margin-cols span,.margin-rows span{flex:0 0 var(--cell);display:flex;align-items:center;justify-content:center}
+.plan-demo{position:absolute;inset:var(--margin);overflow:hidden}
+.plan-demo .cell{position:absolute;width:var(--cell);height:var(--cell);left:calc(var(--c) * var(--cell));top:calc(var(--r) * var(--cell))}
+.cell.done{background:repeating-linear-gradient(45deg,rgba(44,122,58,.9) 0 3px,transparent 3px 9px)}
+.cell.doing{background:rgba(245,200,66,.85)}
+.cell.prio{box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 6px rgba(255,255,255,.7),inset 0 0 0 7.5px var(--ink)}
+.plan-demo .ring{position:absolute;left:calc(var(--sc) * var(--cell));top:calc(var(--sr) * var(--cell));width:calc(var(--d) * var(--cell));height:calc(var(--d) * var(--cell));border:2px dashed rgba(20,20,20,.6);border-radius:50%;transform:translate(-50%,-50%)}
+.plan-demo .start{position:absolute;left:calc(var(--sc) * var(--cell));top:calc(var(--sr) * var(--cell));width:20px;height:20px;border-radius:50%;background:var(--grid);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);transform:translate(-50%,-50%)}
+.plan-demo .tag{position:absolute;background:var(--sheet);border:1.5px solid var(--ink);padding:.15rem .45rem;font:700 .85rem/1.25 Archivo,system-ui,sans-serif;font-stretch:80%;white-space:nowrap;box-shadow:0 2px 6px rgba(20,20,20,.15)}
+.plan-top{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:12px}
+.plan-top .brand{background:var(--sheet);padding:.4rem .6rem;border:2px solid var(--ink)}
+.plan-top a.how{background:var(--sheet);border:2px solid var(--ink);padding:.5rem .7rem;font-weight:700;font-stretch:80%;text-transform:uppercase;font-size:.95rem;text-decoration:none;white-space:nowrap}
+.hero-card{position:relative;z-index:1;margin:12px;max-width:31rem}
+.hero-card{padding:1.1rem 1.1rem .9rem}
+.hero-card .lead{margin:0;font-size:1.1rem;line-height:1.4}
+.hero-card .msg{margin-top:.4rem}
+.hero-card form label{margin-bottom:.75rem}
+.synthetic{position:absolute;right:calc(var(--margin) + 8px);top:calc(var(--margin) + 64px);margin:0;z-index:1;font-size:.8rem;color:var(--ink-2);background:rgba(255,255,255,.85);padding:0 .3rem}
+
+.page{max-width:44rem;margin:0 auto;padding:4rem 1.25rem 3rem}
+.page section+section{margin-top:4rem}
+.page section>p{max-width:62ch}
+
+/* Index : comme l'index des rues au dos du plan */
+.index{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.index li{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:.5rem;padding:1rem 0;border-bottom:1px solid #cfcfca}
+.index b{font-size:1.2rem;font-stretch:85%}
+.index .dots{border-bottom:2px dotted #8f8f89;transform:translateY(-.3em)}
+.index .ref{font-weight:800;font-stretch:80%;color:var(--grid);text-transform:uppercase;font-variant-numeric:tabular-nums}
+.index p{grid-column:1/-1;margin:.25rem 0 0;color:var(--ink-2)}
+
+/* Légende : les états d'un carreau, comme la légende du plan */
+.legende{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem 1.5rem;margin:0;padding:0;list-style:none}
+.legende li{display:flex;gap:.85rem;align-items:center}
+.swatch{width:44px;height:44px;flex:none;border:1px solid var(--grid);background:var(--sheet)}
+.swatch.doing{background:var(--road)}
+.swatch.done{background:repeating-linear-gradient(45deg,var(--park-ink) 0 3px,var(--sheet) 3px 9px)}
+.swatch.alert{background:var(--grid)}
+.swatch.prio{border:3px solid var(--ink);box-shadow:inset 0 0 0 3px var(--sheet),inset 0 0 0 5px var(--ink)}
+.swatch.late{border:3px dashed var(--grid)}
+
+.reflexes{margin:0;padding-left:1.4rem}
+.reflexes li{margin:.6rem 0;padding-left:.25rem}
+.reflexes li::marker{color:var(--grid);font-weight:800}
+
+.imprint{border-top:2px solid var(--ink);margin-top:4rem;padding-top:1.25rem;color:var(--ink-2);font-size:1rem}
+.imprint .brand{font-size:1.2rem;margin-bottom:.6rem}
+.imprint p{margin:.4rem 0;max-width:62ch}
+
+/* ---------- Création ---------- */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem 1.25rem;background:var(--sheet);border-bottom:2px solid var(--ink)}
+.form-page{max-width:36rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+fieldset{border:0;padding:0;margin:2rem 0 0}
+legend{font:800 1.35rem/1.1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;padding:0 0 .6rem;border-bottom:2px solid var(--ink);width:100%;margin-bottom:1.1rem}
+.or{color:var(--ink-2);font-size:1rem;margin:-.4rem 0 .6rem}
+.form-page .submit{margin-top:2rem}
+
+@media (min-width:760px){
+  :root{--cell:80px;--margin:36px}
+  .plan-top{padding:20px 24px}
+  .hero-card{margin:0 24px 9vh;padding:2rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

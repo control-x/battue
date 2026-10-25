@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1400" preserveAspectRatio="xMidYMid slice">
+<!-- Plan de ville fictif, dessiné pour Battue (fond de la page d'accueil). Aucun lieu réel. -->
+<rect width="900" height="1400" fill="#fbfbfa"/>
+<!-- Quartiers bâtis -->
+<g fill="#f6e3da">
+  <path d="M60 470 L420 430 L460 700 L80 760 Z"/>
+  <path d="M500 420 L860 460 L840 760 L520 720 Z"/>
+  <path d="M40 820 L430 780 L470 1120 L60 1180 Z"/>
+  <path d="M520 800 L880 820 L860 1180 L540 1150 Z"/>
+  <path d="M90 60 L470 40 L440 200 L70 230 Z"/>
+  <path d="M560 30 L880 60 L860 190 L540 210 Z"/>
+  <path d="M120 1230 L520 1210 L540 1380 L110 1390 Z"/>
+</g>
+<!-- Parcs et bois -->
+<g fill="#b9dc9f">
+  <path d="M600 520 C650 500 760 510 790 560 C815 610 780 680 700 690 C630 700 575 650 580 600 C582 565 585 530 600 520 Z"/>
+  <path d="M120 900 C190 870 300 880 320 940 C340 1000 290 1060 210 1060 C140 1060 95 1010 100 960 C102 930 105 910 120 900 Z"/>
+  <path d="M640 1240 C700 1215 830 1225 860 1280 C880 1330 830 1380 740 1385 C660 1388 615 1340 620 1295 Z"/>
+  <path d="M0 250 C60 240 120 270 130 300 L0 330 Z"/>
+</g>
+<!-- Rivière et étang -->
+<path d="M-40 360 C120 300 230 400 380 350 C520 300 600 250 720 300 C800 335 860 330 960 290" fill="none" stroke="#7fb8e2" stroke-width="64" stroke-linecap="round"/>
+<path d="M-40 360 C120 300 230 400 380 350 C520 300 600 250 720 300 C800 335 860 330 960 290" fill="none" stroke="#6aa8d6" stroke-width="2" stroke-dasharray="1 0" transform="translate(0 33)"/>
+<ellipse cx="200" cy="975" rx="48" ry="30" fill="#7fb8e2"/>
+<!-- Rues -->
+<g fill="none" stroke="#f2a38a" stroke-width="8" stroke-linecap="round">
+  <path d="M60 520 L440 480"/><path d="M70 600 L450 560"/><path d="M75 680 L455 640"/>
+  <path d="M140 450 L170 760"/><path d="M250 445 L280 750"/><path d="M360 435 L390 735"/>
+  <path d="M520 480 L850 510"/><path d="M530 760 L560 430"/><path d="M820 470 L800 760"/>
+  <path d="M50 880 L440 850"/><path d="M55 1000 L450 960"/><path d="M60 1110 L460 1070"/>
+  <path d="M350 790 L380 1130"/><path d="M180 1080 L200 1180"/>
+  <path d="M530 880 L870 900"/><path d="M535 980 L865 990"/><path d="M540 1080 L860 1090"/>
+  <path d="M620 810 L610 1150"/><path d="M720 815 L715 1160"/><path d="M810 820 L800 1170"/>
+  <path d="M100 140 L460 110"/><path d="M200 50 L180 225"/><path d="M330 45 L320 210"/>
+  <path d="M560 120 L870 130"/><path d="M660 40 L650 200"/><path d="M770 50 L765 200"/>
+  <path d="M150 1300 L530 1290"/><path d="M260 1220 L270 1385"/><path d="M400 1215 L410 1385"/>
+</g>
+<!-- Grands axes -->
+<g fill="none" stroke-linecap="round">
+  <path d="M480 -20 C470 300 500 600 490 780 C480 1000 500 1200 490 1420" stroke="#b8902a" stroke-width="20"/>
+  <path d="M480 -20 C470 300 500 600 490 780 C480 1000 500 1200 490 1420" stroke="#f5c842" stroke-width="15"/>
+  <path d="M-20 790 C200 770 400 800 490 780 C620 760 760 800 920 790" stroke="#b8902a" stroke-width="18"/>
+  <path d="M-20 790 C200 770 400 800 490 780 C620 760 760 800 920 790" stroke="#f5c842" stroke-width="13"/>
+</g>
+<!-- Ponts -->
+<g stroke="#141414" stroke-width="3">
+  <path d="M462 300 L462 370"/><path d="M506 300 L506 370"/>
+</g>
+<!-- Voie ferrée -->
+<path d="M-20 1200 C300 1180 600 1210 920 1190" fill="none" stroke="#141414" stroke-width="5"/>
+<path d="M-20 1200 C300 1180 600 1210 920 1190" fill="none" stroke="#fbfbfa" stroke-width="3" stroke-dasharray="14 14"/>
+</svg>

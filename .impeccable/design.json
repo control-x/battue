@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-25T19:35:32+00:00",
+  "title": "Design System: Battue",
+  "extensions": {
+    "colorMeta": {
+      "grid": {
+        "role": "primary",
+        "displayName": "Rouge plan",
+        "canonical": "#c8102e",
+        "tonalRamp": [
+          "#3c050e",
+          "#640817",
+          "#8c0b20",
+          "#b40e29",
+          "#d0344d",
+          "#de7082",
+          "#ecabb6",
+          "#f8e2e6"
+        ]
+      },
+      "grid-deep": {
+        "role": "primary",
+        "displayName": "Rouge plan foncé",
+        "canonical": "#a50d26",
+        "tonalRamp": [
+          "#32040b",
+          "#520613",
+          "#73091b",
+          "#940c22",
+          "#b23147",
+          "#c96e7d",
+          "#e0aab3",
+          "#f4e2e5"
+        ]
+      },
+      "grid-soft": {
+        "role": "primary",
+        "displayName": "Rouge plan voilé",
+        "canonical": "rgba(200,16,46,.28)"
+      },
+      "road": {
+        "role": "secondary",
+        "displayName": "Jaune grand axe",
+        "canonical": "#f5c842",
+        "tonalRamp": [
+          "#4a3c14",
+          "#7a6421",
+          "#ac8c2e",
+          "#dcb43b",
+          "#f6d05e",
+          "#f9de8e",
+          "#fcecbd",
+          "#fef8e8"
+        ]
+      },
+      "park-ink": {
+        "role": "secondary",
+        "displayName": "Vert parc encre",
+        "canonical": "#2c7a3a",
+        "tonalRamp": [
+          "#0d2511",
+          "#163d1d",
+          "#1f5529",
+          "#286e34",
+          "#4c8e58",
+          "#80af89",
+          "#b5d0ba",
+          "#e6efe7"
+        ]
+      },
+      "street": {
+        "role": "tertiary",
+        "displayName": "Saumon rue",
+        "canonical": "#f2a38a",
+        "tonalRamp": [
+          "#493129",
+          "#795245",
+          "#a97261",
+          "#da937c",
+          "#f4b19c",
+          "#f7c8b9",
+          "#fadfd6",
+          "#fdf4f1"
+        ]
+      },
+      "water": {
+        "role": "tertiary",
+        "displayName": "Bleu eau",
+        "canonical": "#7fb8e2",
+        "tonalRamp": [
+          "#263744",
+          "#405c71",
+          "#59819e",
+          "#72a6cb",
+          "#92c3e6",
+          "#b2d4ee",
+          "#d2e6f5",
+          "#f0f6fc"
+        ]
+      },
+      "park": {
+        "role": "tertiary",
+        "displayName": "Vert parc",
+        "canonical": "#b9dc9f",
+        "tonalRamp": [
+          "#384230",
+          "#5c6e50",
+          "#829a6f",
+          "#a6c68f",
+          "#c4e1ad",
+          "#d5eac5",
+          "#e6f3dd",
+          "#f7fbf3"
+        ]
+      },
+      "wa": {
+        "role": "tertiary",
+        "displayName": "Vert WhatsApp",
+        "canonical": "#1d7f45",
+        "tonalRamp": [
+          "#092615",
+          "#0e4022",
+          "#145930",
+          "#1a723e",
+          "#3f9261",
+          "#77b28f",
+          "#b0d2be",
+          "#e4f0e9"
+        ]
+      },
+      "focus": {
+        "role": "tertiary",
+        "displayName": "Bleu repère",
+        "canonical": "#1f5fbf",
+        "tonalRamp": [
+          "#091d39",
+          "#103060",
+          "#164286",
+          "#1c56ac",
+          "#4177c9",
+          "#799fd9",
+          "#b1c7e9",
+          "#e4ecf7"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Encre",
+        "canonical": "#141414",
+        "tonalRamp": [
+          "#060606",
+          "#0a0a0a",
+          "#0e0e0e",
+          "#121212",
+          "#373737",
+          "#727272",
+          "#adadad",
+          "#e3e3e3"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Encre seconde",
+        "canonical": "#424242",
+        "tonalRamp": [
+          "#141414",
+          "#212121",
+          "#2e2e2e",
+          "#3b3b3b",
+          "#5e5e5e",
+          "#8e8e8e",
+          "#bdbdbd",
+          "#e8e8e8"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papier",
+        "canonical": "#f8f9f7",
+        "tonalRamp": [
+          "#4a4b4a",
+          "#7c7c7c",
+          "#aeaead",
+          "#dfe0de",
+          "#f9faf8",
+          "#fbfbfa",
+          "#fdfdfc",
+          "#fefefe"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Feuille",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#4d4d4d",
+          "#808080",
+          "#b2b2b2",
+          "#e6e6e6",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff",
+          "#ffffff"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Filet fin",
+        "canonical": "#d8d8d3",
+        "tonalRamp": [
+          "#41413f",
+          "#6c6c6a",
+          "#979794",
+          "#c2c2be",
+          "#dededa",
+          "#e8e8e5",
+          "#f1f1f0",
+          "#fafafa"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Question du cartouche d'accueil, titre de la création. Capitales, largeur 66 %."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Titres de sections, de fenêtres et de fiches. Capitales, largeur 70 %."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Légendes de groupes de champs, sous-titres de fenêtres."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Texte courant et champs ; mesure 62ch ; 1rem sur la carte."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Boutons, outils, références d'index. Capitales, largeur 80 %."
+      },
+      "margin-index": {
+        "displayName": "Index de marge",
+        "purpose": "Lettres et numéros des carreaux, en rouge plan."
+      }
+    },
+    "shadows": [
+      {
+        "name": "cartouche-pose",
+        "value": "0 6px 18px rgba(20,20,20,.18)",
+        "purpose": "Cartouches, fiches, zoom, bouton Signaler : posé sur le plan."
+      },
+      {
+        "name": "fenetre",
+        "value": "0 10px 40px rgba(20,20,20,.35)",
+        "purpose": "Dialogues, avec voile rgba(20,20,20,.45)."
+      },
+      {
+        "name": "halo-plan",
+        "value": "text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 4px #fff, 0 0 4px #fff",
+        "purpose": "Étiquettes de carreaux sur la carte."
+      },
+      {
+        "name": "double-filet-prioritaire",
+        "value": "inset 0 0 0 3px var(--ink), inset 0 0 0 6px rgba(255,255,255,.7), inset 0 0 0 7.5px var(--ink)",
+        "purpose": "Statut prioritaire hors carte (sur la carte : trait 3 px + rectangle intérieur 1.5 px)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "background-color .15s ease-out, transform .15s ease-out; :active translateY(1px)",
+        "purpose": "Seul mouvement du système ; coupé sous prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "carte",
+        "value": "640px"
+      },
+      {
+        "name": "accueil",
+        "value": "760px"
+      }
+    ],
+    "mapStyles": {
+      "cell-todo": {
+        "color": "#c8102e",
+        "weight": 1.2,
+        "opacity": 0.75,
+        "fillOpacity": 0
+      },
+      "cell-prio": {
+        "color": "#141414",
+        "weight": 3,
+        "opacity": 0.9,
+        "inset": {
+          "weight": 1.5,
+          "opacity": 0.85,
+          "ratio": 0.07
+        }
+      },
+      "cell-doing": {
+        "fillColor": "#f5c842",
+        "fillOpacity": 0.62
+      },
+      "cell-done": {
+        "fill": "pattern hatch-done : bande #2c7a3a 3.2/9 à 45°, fond blanc 35 %"
+      },
+      "cell-alert": {
+        "fillColor": "#c8102e",
+        "fillOpacity": 0.42
+      },
+      "cell-late": {
+        "color": "#c8102e",
+        "weight": 4,
+        "dashArray": "8 6"
+      },
+      "cell-selected": {
+        "color": "#1f5fbf",
+        "weight": 5
+      },
+      "distance-rings": {
+        "color": "#141414",
+        "weight": 1.5,
+        "opacity": 0.55,
+        "dashArray": "5 7"
+      },
+      "tiles": "filter: saturate(.55) contrast(1.04)"
+    }
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'action unique de l'écran, en rouge plan.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Lancer la battue</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:.6em 1.1em;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.05rem;line-height:1.1;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;color:#141414;background:#fff;border:2px solid #141414;border-radius:3px;cursor:pointer;transition:background-color .15s ease-out,transform .15s ease-out}.ds-btn:hover{background:#efefea}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}.ds-btn-primary{background:#c8102e;border-color:#c8102e;color:#fff}.ds-btn-primary:hover{background:#a50d26}"
+    },
+    {
+      "name": "Bouton secondaire",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Étiquette de plan blanche à filet noir.",
+      "html": "<button class=\"ds-btn\">Utiliser ma position</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:.6em 1.1em;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.05rem;line-height:1.1;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;color:#141414;background:#fff;border:2px solid #141414;border-radius:3px;cursor:pointer;transition:background-color .15s ease-out,transform .15s ease-out}.ds-btn:hover{background:#efefea}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}"
+    },
+    {
+      "name": "Bouton Signaler",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action d'urgence flottante de la carte, avec icône au trait et ombre posée.",
+      "html": "<button class=\"ds-btn ds-btn-primary ds-sig\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Signaler</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:48px;padding:.6em 1.1em;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.05rem;line-height:1.1;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;color:#141414;background:#fff;border:2px solid #141414;border-radius:3px;cursor:pointer;transition:background-color .15s ease-out,transform .15s ease-out}.ds-btn:hover{background:#efefea}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}.ds-btn-primary{background:#c8102e;border-color:#c8102e;color:#fff}.ds-btn-primary:hover{background:#a50d26}.ds-sig{min-height:56px;font-size:1.1rem;box-shadow:0 6px 18px rgba(20,20,20,.18)}"
+    },
+    {
+      "name": "Champ",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Champ blanc à filet noir, libellé gras au-dessus.",
+      "html": "<label class=\"ds-label\">Dernier lieu connu<input class=\"ds-input\" placeholder=\"Adresse, ville\"></label>",
+      "css": ".ds-label{display:block;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.125rem;color:#141414}.ds-input{display:block;width:100%;box-sizing:border-box;margin-top:.35rem;padding:.7rem .8rem;font-family:Archivo,system-ui,sans-serif;font-size:1.125rem;line-height:1.3;color:#141414;background:#fff;border:2px solid #141414;border-radius:3px}.ds-input::placeholder{color:#6b6b6b}.ds-input:focus{outline:3px solid #1f5fbf;outline-offset:1px}"
+    },
+    {
+      "name": "Cartouche",
+      "kind": "card",
+      "refersTo": "cartouche",
+      "description": "Cadre blanc à filet noir posé sur le plan.",
+      "html": "<div class=\"ds-cartouche\"><h2 class=\"ds-h\">Un proche a disparu ?</h2><p class=\"ds-p\">Puis quadrillez le quartier ensemble.</p></div>",
+      "css": ".ds-cartouche{background:#fff;border:2px solid #141414;box-shadow:0 6px 18px rgba(20,20,20,.18);padding:1.25rem;max-width:22rem;color:#141414}.ds-h{margin:0;font-family:Archivo,system-ui,sans-serif;font-weight:800;font-size:2.4rem;line-height:.95;font-stretch:66%;text-transform:uppercase}.ds-p{font-family:Archivo,system-ui,sans-serif;font-size:1.1rem;line-height:1.4;margin:.6rem 0 0}"
+    },
+    {
+      "name": "Numéros d'urgence",
+      "kind": "chip",
+      "refersTo": "emergency-number",
+      "description": "17 et 112 cerclés, appelables, sur chaque écran.",
+      "html": "<p class=\"ds-urg\">Appelez le <a href=\"tel:17\">17</a> ou le <a href=\"tel:112\">112</a></p>",
+      "css": ".ds-urg{display:flex;align-items:center;gap:.4rem;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.125rem;color:#141414}.ds-urg a{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 .7rem;border:2px solid #c8102e;border-radius:999px;color:#c8102e;font-weight:800;font-size:1.3rem;text-decoration:none;font-variant-numeric:tabular-nums}.ds-urg a:hover{background:#c8102e;color:#fff}.ds-urg a:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}"
+    },
+    {
+      "name": "Légende des statuts",
+      "kind": "custom",
+      "refersTo": "status-swatch",
+      "description": "Signature : motif + mot pour chaque état d'un carreau.",
+      "html": "<ul class=\"ds-leg\"><li><i class=\"ds-sw prio\"></i>Prioritaire</li><li><i class=\"ds-sw\"></i>À faire</li><li><i class=\"ds-sw doing\"></i>En cours</li><li><i class=\"ds-sw done\"></i>Fait</li><li><i class=\"ds-sw alert\"></i>Signalé</li><li><i class=\"ds-sw late\"></i>Retard</li></ul>",
+      "css": ".ds-leg{display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;margin:0;padding:0;list-style:none;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1rem;color:#141414}.ds-leg li{display:flex;align-items:center;gap:.6rem}.ds-sw{width:44px;height:44px;box-sizing:border-box;border:1px solid #c8102e;background:#fff}.ds-sw.doing{background:#f5c842}.ds-sw.done{background:repeating-linear-gradient(45deg,#2c7a3a 0 3px,#fff 3px 9px)}.ds-sw.alert{background:#c8102e}.ds-sw.prio{border:3px solid #141414;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px #141414}.ds-sw.late{border:3px dashed #c8102e}"
+    },
+    {
+      "name": "Index de marge",
+      "kind": "nav",
+      "refersTo": "margin-index",
+      "description": "Lettres et numéros rouges des carreaux, collés aux bords du quadrillage.",
+      "html": "<div class=\"ds-grid\"><div class=\"ds-cols\"><span>E</span><span>F</span><span>G</span><span>H</span></div><div class=\"ds-rows\"><span>5</span><span>6</span><span>7</span></div><div class=\"ds-cells\"></div></div>",
+      "css": ".ds-grid{position:relative;width:280px;height:214px;background:#f8f9f7;border:2px solid #141414}.ds-cols,.ds-rows{position:absolute;display:flex;background:rgba(255,255,255,.88);color:#c8102e;font-family:Archivo,system-ui,sans-serif;font-weight:800;font-size:.85rem;line-height:1;font-stretch:80%}.ds-cols{left:24px;right:0;top:0;height:22px;border-bottom:1px solid rgba(200,16,46,.28)}.ds-rows{top:22px;left:0;bottom:0;width:24px;flex-direction:column;border-right:1px solid rgba(200,16,46,.28)}.ds-cols span,.ds-rows span{flex:1;display:flex;align-items:center;justify-content:center}.ds-cells{position:absolute;left:24px;top:22px;right:0;bottom:0;background:repeating-linear-gradient(90deg,transparent 0 63px,#c8102e 63px 64px),repeating-linear-gradient(transparent 0 63px,#c8102e 63px 64px)}"
+    },
+    {
+      "name": "Marque",
+      "kind": "nav",
+      "refersTo": "cartouche",
+      "description": "Carreau 2 × 2 hachuré et surligné, et le nom en capitales condensées.",
+      "html": "<a class=\"ds-brand\" href=\"#\"><span class=\"ds-mark\"><span></span><span></span><span></span><span></span></span>Battue</a>",
+      "css": ".ds-brand{display:inline-flex;align-items:center;gap:.55rem;font-family:Archivo,system-ui,sans-serif;font-weight:800;font-size:1.5rem;line-height:1;font-stretch:70%;text-transform:uppercase;letter-spacing:.03em;text-decoration:none;color:#141414}.ds-brand:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}.ds-mark{width:26px;height:26px;box-sizing:border-box;border:2px solid #141414;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}.ds-mark span{border:1px solid rgba(200,16,46,.28)}.ds-mark span:nth-child(2){background:repeating-linear-gradient(45deg,#2c7a3a 0 2px,transparent 2px 5px)}.ds-mark span:nth-child(3){background:#f5c842}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le plan de ville pliant",
+    "overview": "**Creative North Star : « Le plan de ville pliant »**\n\nBattue est un plan de ville quadrillé à la Blay-Foldex : papier offset blanc froid, cadre de marge lettré A, B, C… et numéroté 1, 2, 3… en rouge plan, filets de carroyage rouges, rues saumon, grands axes jaunes, eau bleue, parcs verts, texte noir en grotesque condensée de cartographe. Les secteurs de la battue sont les carreaux du plan ; chaque état d'un secteur s'écrit comme une légende de plan, par un motif et un mot, jamais par la couleur seule.\n\nLe monde est dense et lisible au soleil : grands caractères (corps 18 px), filets noirs de 2 px partout, cibles tactiles de 48 px minimum. Les éléments d'interface sont des « cartouches » : des cadres blancs à filet noir posés sur le plan. L'accueil (Persuade) déplie le plan en plein écran ; la création et la carte (Operate) héritent du monde avec retenue, la carte Leaflet étant désaturée pour que le carroyage rouge et les aplats de statut restent maîtres.\n\nRejets confirmés par le contrat de direction : l'avis de recherche rouge alarmiste et la page SaaS bleue à cartes arrondies.",
+    "keyCharacteristics": [
+      "Carroyage rouge et index de marge lettré/numéroté comme signature, y compris en direct sur la carte (l'index suit le déplacement).",
+      "Cartouches blancs à filet noir de 2 px, coins nets ou à peine adoucis (3 px).",
+      "Capitales condensées d'Archivo (largeur 66 à 85 %) pour la voix du plan ; Archivo pleine largeur pour la lecture.",
+      "Statuts = motif + mot : carreau nu, aplat jaune, hachure verte, rouge plein, double filet noir, tirets rouges.",
+      "Icônes au trait 24 × 24, trait 2, une seule épaisseur."
+    ],
+    "rules": [
+      {
+        "name": "La règle du rouge de carroyage",
+        "body": "Le rouge trace la grille, numérote la marge et porte l'action principale ou l'alerte ; il ne remplit jamais un fond de page ni un bandeau. Un écran rouge serait l'avis de recherche alarmiste que Battue refuse.",
+        "section": "colors"
+      },
+      {
+        "name": "La règle de la légende",
+        "body": "Aucun statut n'est porté par la couleur seule : chaque état a un motif (nu, aplat, hachure, plein, double filet, tirets) et un mot.",
+        "section": "colors"
+      },
+      {
+        "name": "La règle de la voix du plan",
+        "body": "Ce qui nomme (titres, boutons, secteurs, marge) est en capitales condensées 66–85 % ; ce qui explique reste en bas de casse pleine largeur. Jamais de capitales condensées pour une phrase.",
+        "section": "typography"
+      },
+      {
+        "name": "La règle de l'index de marge",
+        "body": "Toute vue du quadrillage porte son index : lettres en haut, numéros à gauche, en rouge plan, alignés sur les centres des carreaux visibles.",
+        "section": "layout"
+      },
+      {
+        "name": "La règle du papier posé",
+        "body": "L'ombre signifie « posé sur le plan », pas « cliquable ». Les boutons n'ont pas d'ombre, sauf l'action d'urgence flottante.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do poser toute interface sur le plan comme un cartouche blanc à filet noir de 2 px.",
+      "Do écrire chaque statut par un motif et un mot, avec le même vocabulaire sur la carte, la démo et la légende.",
+      "Do accompagner tout quadrillage de son index de marge rouge.",
+      "Do garder le 17 et le 112 cerclés et appelables sur chaque écran.",
+      "Do utiliser les capitales condensées d'Archivo pour nommer, la pleine largeur pour expliquer.",
+      "Do tenir les cibles tactiles à 44 px minimum (48 px pour les boutons) et le corps de texte à 1.125rem.",
+      "Do désaturer le fond cartographique (`saturate(.55)`) pour que carroyage et statuts dominent."
+    ],
+    "donts": [
+      "Don't remplir un fond ou un bandeau de rouge plan : pas d'avis de recherche alarmiste.",
+      "Don't faire une page SaaS bleue à cartes arrondies et ombrées ; le bleu repère reste réservé au focus et à « ici ».",
+      "Don't porter une information par la seule couleur.",
+      "Don't utiliser les teintes du plan (saumon, eau, parc) pour l'interface.",
+      "Don't utiliser d'ombre décalée en dur ni d'arrondi supérieur à 3 px, hors pilules d'urgence et repères ronds.",
+      "Don't mélanger les épaisseurs d'icônes ni utiliser des caractères comme icônes."
+    ]
+  }
+}

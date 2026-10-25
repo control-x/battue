@@ -15,8 +15,9 @@
 // POST /sector/done  {id,e,d,f,n} déclare un secteur déjà fait (heures saisies par le bénévole)
 // POST /point   {lat,lng,txt,who}
 // POST /point/delete {id}
-// POST /close {outcome?} clôture, coordinateur seulement : toutes les données sont supprimées ;
-//                outcome "found" / "not-found" (facultatif) rejoint l'historique anonyme
+// POST /close {outcome?, foundByBattue?} clôture, coordinateur seulement : toutes les données sont supprimées ;
+//                outcome "found" / "not-found" et, si retrouvée, foundByBattue "yes" / "no" / "unknown"
+//                (facultatifs) rejoignent l'historique anonyme
 // Sans activité pendant 30 jours, la battue s'efface d'elle-même.
 //
 // Admin, avec Authorization: Bearer <ADMIN_TOKEN> ; jamais de contenu de battue :
@@ -113,14 +114,15 @@ export class Search extends DurableObject {
   }
 
   // Résumé sans donnée personnelle : jour, département, durées, nombres
-  summary(reason, outcome) {
+  summary(reason, answers) {
     const info = this.meta.info, stats = this.stats(), sectors = Object.values(this.state.secteurs);
     const launchDelay = info.sinceTs ? info.created - info.sinceTs : null;
     return {
       day: parisDay(info.created),
       departement: departement(info.address),
       reason,
-      outcome: outcome || null,
+      outcome: answers.outcome || null,
+      foundByBattue: answers.foundByBattue || null,
       durationMin: minutes(Date.now() - info.created),
       activeMin: minutes((this.state.t || info.created) - info.created),
       launchDelayMin: launchDelay >= 0 && launchDelay < 7 * 24 * 3600e3 ? minutes(launchDelay) : null,
@@ -209,9 +211,9 @@ export class Search extends DurableObject {
     return true;
   }
 
-  async wipe(event, outcome) {
+  async wipe(event, answers = {}) {
     stat(this.env, event, this.meta?.info.test);
-    if (this.meta && !this.meta.info.test) await registryStub(this.env).archive(this.summary(event, outcome));
+    if (this.meta && !this.meta.info.test) await registryStub(this.env).archive(this.summary(event, answers));
     if (this.meta?.id) await registryStub(this.env).close(this.meta.id, event);
     for (const ws of this.ctx.getWebSockets()) try { ws.close(4004, "clôturée"); } catch {}
     await this.ctx.storage.deleteAlarm();
@@ -272,8 +274,10 @@ export class Search extends DurableObject {
 
     if (url.pathname === "/close") {
       if (!isAdmin) return json({ error: "admin" }, 403);
-      // Issue facultative, anonyme : la personne a-t-elle été retrouvée ?
-      await this.wipe("close", ["found", "not-found"].includes(b.outcome) ? b.outcome : null);
+      // Issue facultative, anonyme : la personne a-t-elle été retrouvée, et grâce à la battue ?
+      const outcome = ["found", "not-found"].includes(b.outcome) ? b.outcome : null;
+      const foundByBattue = outcome === "found" && ["yes", "no", "unknown"].includes(b.foundByBattue) ? b.foundByBattue : null;
+      await this.wipe("close", { outcome, foundByBattue });
       return json({ ok: true });
     }
     if (url.pathname === "/sector/start" || url.pathname === "/sector/stop") {

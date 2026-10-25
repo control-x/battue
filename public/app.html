@@ -271,6 +271,13 @@
     <legend>La personne a-t-elle été retrouvée&nbsp;?</legend>
     <label class="check"><input type="radio" name="outcome" value="found"> Oui</label>
     <label class="check"><input type="radio" name="outcome" value="not-found"> Non</label>
+    <div id="foundby" hidden>
+      <p class="dlabel" style="margin-top:.6rem">Grâce à la battue&nbsp;?</p>
+      <p class="msg" style="margin:-.1rem 0 .4rem">Retrouvée par quelqu'un qui cherchait, ou qui avait été prévenu.</p>
+      <label class="check"><input type="radio" name="foundby" value="yes"> Oui</label>
+      <label class="check"><input type="radio" name="foundby" value="no"> Non</label>
+      <label class="check"><input type="radio" name="foundby" value="unknown"> Je ne sais pas</label>
+    </div>
     <p class="msg">Facultatif et anonyme&nbsp;: seulement pour mesurer l'utilité de Battue.</p>
   </fieldset>
   <button id="close" class="btn btn-primary" type="button">Clôturer la recherche</button>
@@ -761,11 +768,15 @@ function setupCoordinator(){
       btn.lastChild.textContent="Journal exporté";
     }).catch(function(){btn.textContent="Pas de connexion, réessayez";});
   };
+  // La question « grâce à la battue ? » n'apparaît que si la personne a été retrouvée
+  document.querySelectorAll("input[name=outcome]").forEach(function(radio){
+    radio.onchange=function(){document.getElementById("foundby").hidden=radio.value!=="found";};
+  });
   var closeBtn=document.getElementById("close"), armed=false;
   closeBtn.onclick=function(){
     if(!armed){armed=true;closeBtn.textContent="Confirmer : tout supprimer";return;}
-    var picked=document.querySelector("input[name=outcome]:checked");
-    post("/close",{outcome:picked?picked.value:""}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
+    var picked=document.querySelector("input[name=outcome]:checked"), by=document.querySelector("input[name=foundby]:checked");
+    post("/close",{outcome:picked?picked.value:"",foundByBattue:by?by.value:""}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
       .catch(function(err){document.getElementById("closemsg").textContent=err.message;});
   };
   if(justCreated)dlg.showModal();

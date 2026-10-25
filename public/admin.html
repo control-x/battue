@@ -143,8 +143,8 @@ function closeSearch(id,done){
 // Historique anonyme des battues terminées
 function dur(m){if(m==null)return "–";if(m<60)return m+" min";if(m<1440)return Math.floor(m/60)+" h "+("0"+m%60).slice(-2);return Math.floor(m/1440)+" j "+Math.floor(m%1440/60)+" h";}
 function median(values){var v=values.filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});if(!v.length)return null;var k=Math.floor(v.length/2);return v.length%2?v[k]:Math.round((v[k-1]+v[k])/2);}
-var REASONS={close:"clôture","admin-close":"admin",expire:"30 jours"}, OUTCOMES={found:"retrouvée","not-found":"non retrouvée"};
-var COLUMNS=[["day","Jour"],["departement","Dépt"],["durationMin","Durée"],["launchDelayMin","Lancée après"],["firstVolunteerMin","1er bénévole"],["phones","Téléphones"],["peakOnline","Pic en ligne"],["teams","Binômes"],["sectorsDone","Carreaux faits"],["sectorsAlert","À revoir"],["lateReturns","Retards"],["points","Signalements"],["reason","Fin"],["outcome","Issue"]];
+var REASONS={close:"clôture","admin-close":"admin",expire:"30 jours"}, OUTCOMES={found:"retrouvée","not-found":"non retrouvée"}, BY_BATTUE={yes:"oui",no:"non",unknown:"ne sait pas"};
+var COLUMNS=[["day","Jour"],["departement","Dépt"],["durationMin","Durée"],["launchDelayMin","Lancée après"],["firstVolunteerMin","1er bénévole"],["phones","Téléphones"],["peakOnline","Pic en ligne"],["teams","Binômes"],["sectorsDone","Carreaux faits"],["sectorsAlert","À revoir"],["lateReturns","Retards"],["points","Signalements"],["reason","Fin"],["outcome","Issue"],["foundByBattue","Grâce à la battue"]];
 var HISTORY=[];
 function loadHistory(){
   var box=document.getElementById("history");
@@ -155,9 +155,11 @@ function loadHistory(){
     if(!HISTORY.length){box.innerHTML='<p class="empty">Aucune battue terminée pour l\'instant.</p>';document.getElementById("histsum").innerHTML="";return;}
     var pick=function(k){return HISTORY.map(function(h){return h[k];});};
     var answered=HISTORY.filter(function(h){return h.outcome;}), found=answered.filter(function(h){return h.outcome==="found";}).length;
+    var byAnswered=HISTORY.filter(function(h){return h.foundByBattue==="yes"||h.foundByBattue==="no";}), byBattue=byAnswered.filter(function(h){return h.foundByBattue==="yes";}).length;
     document.getElementById("histsum").innerHTML='<div class="kpis">'+
       '<div><b>'+HISTORY.length+'</b><span>battues terminées</span></div>'+
       '<div><b>'+(answered.length?found+" / "+answered.length:"–")+'</b><span>personnes retrouvées (réponses)</span></div>'+
+      '<div><b>'+(byAnswered.length?byBattue+" / "+byAnswered.length:"–")+'</b><span>retrouvées grâce à la battue (réponses)</span></div>'+
       '<div><b>'+dur(median(pick("durationMin")))+'</b><span>durée médiane</span></div>'+
       '<div><b>'+dur(median(pick("launchDelayMin")))+'</b><span>lancée après la disparition</span></div>'+
       '<div><b>'+dur(median(pick("firstVolunteerMin")))+'</b><span>jusqu\'au 1er bénévole</span></div>'+
@@ -172,6 +174,7 @@ function loadHistory(){
         else if(c[0]==="sectorsDone")v=v+" ("+(v*0.25).toLocaleString("fr-FR")+" km²)";
         else if(c[0]==="reason")v=REASONS[v]||v;
         else if(c[0]==="outcome")v=OUTCOMES[v]||"–";
+        else if(c[0]==="foundByBattue")v=BY_BATTUE[v]||"–";
         else if(v==null)v="–";
         return "<td>"+esc(v)+"</td>";
       }).join("")+'</tr>';}).join("")+'</tbody></table>';

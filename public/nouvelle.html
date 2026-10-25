@@ -91,7 +91,7 @@ form.onsubmit=function(e){
     var f=r[0][0]; if(!f)throw new Error("Adresse introuvable, précisez la ville.");
     return fetch("/api/new",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       name:form.name.value.trim(), address:f.properties.label, lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0],
-      since:form.since.value, description:form.description.value.trim(), phone:form.phone.value.trim(),
+      since:form.since.value, sinceTs:form.since.value?new Date(form.since.value).getTime():null, description:form.description.value.trim(), phone:form.phone.value.trim(),
       whatsapp:form.whatsapp.value.trim(), photo:r[1], police:form.police.checked})});
   }).then(function(res){return res.json().then(function(j){if(!res.ok)throw new Error(j.error||"Erreur "+res.status);return j;});})
     .then(function(j){location.href="/r/"+j.id+"#c="+j.coord+"&new";})

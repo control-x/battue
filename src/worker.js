@@ -8,20 +8,22 @@
 // GET  /state            -> {role, info, secteurs:{A1:{s,e,n,d,f,ds,t}}, points:[{id,lat,lng,txt,t,who}]}
 // GET  /log              -> {log:[{t,txt}]} journal horodaté, coordinateur seulement
 // GET  /photo            -> {photo: "data:image/jpeg;base64,…"}
-// GET  /ws               -> websocket : envoyer "auth <jeton>", puis reçoit l'état à chaque changement
+// GET  /ws               -> websocket : envoyer "auth <jeton> <appareil>", puis reçoit l'état à chaque changement
 // POST /sector  {id,s,e,n,d,f}  correction manuelle, coordinateur seulement ; d/f : heures "HH:MM"
 // POST /sector/start {id,e,o,p} commence ; p : durée prévue en minutes ; o : jeton de l'appareil ; rouvrir un secteur fait : coordinateur
 // POST /sector/stop  {id,o,n}   termine ; seul l'appareil qui a commencé peut arrêter
 // POST /sector/done  {id,e,d,f,n} déclare un secteur déjà fait (heures saisies par le bénévole)
 // POST /point   {lat,lng,txt,who}
 // POST /point/delete {id}
-// POST /close   clôture, coordinateur seulement : toutes les données sont supprimées
+// POST /close {outcome?} clôture, coordinateur seulement : toutes les données sont supprimées ;
+//                outcome "found" / "not-found" (facultatif) rejoint l'historique anonyme
 // Sans activité pendant 30 jours, la battue s'efface d'elle-même.
 //
 // Admin, avec Authorization: Bearer <ADMIN_TOKEN> ; jamais de contenu de battue :
 // GET  /api/admin/searches -> battues ouvertes : code, dates, nombre de bénévoles connectés, de carreaux, de signalements
 // POST /api/admin/close {id} -> ferme une battue par son code (même effet qu'une clôture)
 // GET  /api/admin/stats    -> compteurs Analytics Engine sur 24 h, 7 et 30 jours
+// GET  /api/admin/history  -> historique anonyme des battues terminées (jour, département, durées, nombres)
 
 import { DurableObject } from "cloudflare:workers";
 
@@ -36,6 +38,13 @@ const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 const randomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
 const STATUS_LABELS = { todo: "à faire", doing: "en cours", done: "fait", alert: "signalement / à refaire" };
 const IDLE_MS = 30 * 24 * 3600 * 1000;
+const minutes = (ms) => (ms == null || !isFinite(ms) ? null : Math.round(ms / 60000));
+const parisDay = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+// Département tiré du code postal de l'adresse (2A/2B confondus en 20) ; jamais la ville ni l'adresse
+const departement = (address) => {
+  const m = /\b(\d{5})\b/.exec(address || "");
+  return m ? (m[1].startsWith("97") ? m[1].slice(0, 3) : m[1].slice(0, 2)) : null;
+};
 const NO_VOLUNTEER_MS = 30 * 60 * 1000;
 const GONE = { error: "Recherche introuvable ou clôturée" };
 // Compteurs admin : un nom d'événement, jamais de contenu
@@ -53,6 +62,14 @@ export class Registry extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS searches (id TEXT PRIMARY KEY, created INTEGER, test INTEGER, closed INTEGER, reason TEXT)");
+    // Historique anonyme, gardé après l'effacement des battues : aucune donnée personnelle, aucun code de battue
+    ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS history (closed INTEGER, data TEXT)");
+  }
+  archive(row) {
+    this.ctx.storage.sql.exec("INSERT INTO history (closed, data) VALUES (?, ?)", Date.now(), JSON.stringify(row));
+  }
+  history() {
+    return this.ctx.storage.sql.exec("SELECT data FROM history ORDER BY closed DESC LIMIT 1000").toArray().map((row) => JSON.parse(row.data));
   }
   add(id, created, test) {
     this.ctx.storage.sql.exec("INSERT OR REPLACE INTO searches (id, created, test) VALUES (?, ?, ?)", id, created, test ? 1 : 0);
@@ -78,9 +95,53 @@ export class Search extends DurableObject {
   }
 
   // Premier passage d'un bénévole : l'invitation fonctionne, pas d'alerte « aucun bénévole »
+  // Compteurs anonymes pour l'historique ; les identifiants d'appareil (aléatoires) disparaissent avec la battue
+  stats() {
+    return (this.meta.stats ||= { devices: [], peak: 0, points: 0 });
+  }
+
+  async noteDevice(device) {
+    const stats = this.stats();
+    const online = this.ctx.getWebSockets().filter((ws) => ws.deserializeAttachment()?.role === "vol").length;
+    let changed = online > stats.peak;
+    if (changed) stats.peak = online;
+    if (device && stats.devices.length < 1000 && !stats.devices.includes(device)) {
+      stats.devices.push(device);
+      changed = true;
+    }
+    if (changed) await this.ctx.storage.put("meta", this.meta);
+  }
+
+  // Résumé sans donnée personnelle : jour, département, durées, nombres
+  summary(reason, outcome) {
+    const info = this.meta.info, stats = this.stats(), sectors = Object.values(this.state.secteurs);
+    const launchDelay = info.sinceTs ? info.created - info.sinceTs : null;
+    return {
+      day: parisDay(info.created),
+      departement: departement(info.address),
+      reason,
+      outcome: outcome || null,
+      durationMin: minutes(Date.now() - info.created),
+      activeMin: minutes((this.state.t || info.created) - info.created),
+      launchDelayMin: launchDelay >= 0 && launchDelay < 7 * 24 * 3600e3 ? minutes(launchDelay) : null,
+      firstVolunteerMin: this.meta.firstVolunteerAt ? minutes(this.meta.firstVolunteerAt - info.created) : null,
+      firstSectorMin: this.meta.firstSectorAt ? minutes(this.meta.firstSectorAt - info.created) : null,
+      phones: stats.devices.length,
+      peakOnline: stats.peak,
+      teams: new Set(sectors.map((sector) => sector.e).filter(Boolean)).size,
+      sectorsDone: sectors.filter((sector) => sector.s === "done").length,
+      sectorsAlert: sectors.filter((sector) => sector.s === "alert").length,
+      lateReturns: sectors.filter((sector) => sector.s === "done" && sector.p && sector.ds && sector.t > sector.ds + sector.p * 60000).length,
+      points: stats.points,
+      hadPhoto: !!info.hasPhoto,
+      hadWhatsapp: !!info.whatsapp,
+    };
+  }
+
   async noteVolunteer(role) {
     if (role !== "vol" || this.meta.volunteerSeen) return;
     this.meta.volunteerSeen = true;
+    this.meta.firstVolunteerAt = Date.now();
     await this.ctx.storage.put("meta", this.meta);
     stat(this.env, "first-volunteer", this.meta.info.test);
   }
@@ -110,6 +171,7 @@ export class Search extends DurableObject {
     // Étapes du parcours pour l'admin : création → premier bénévole → premier carreau
     if (event === "sector" && !this.meta.sectorSeen) {
       this.meta.sectorSeen = true;
+      this.meta.firstSectorAt = Date.now();
       await this.ctx.storage.put("meta", this.meta);
       stat(this.env, "first-sector", this.meta.info.test);
     }
@@ -147,8 +209,9 @@ export class Search extends DurableObject {
     return true;
   }
 
-  async wipe(event) {
+  async wipe(event, outcome) {
     stat(this.env, event, this.meta?.info.test);
+    if (this.meta && !this.meta.info.test) await registryStub(this.env).archive(this.summary(event, outcome));
     if (this.meta?.id) await registryStub(this.env).close(this.meta.id, event);
     for (const ws of this.ctx.getWebSockets()) try { ws.close(4004, "clôturée"); } catch {}
     await this.ctx.storage.deleteAlarm();
@@ -209,7 +272,8 @@ export class Search extends DurableObject {
 
     if (url.pathname === "/close") {
       if (!isAdmin) return json({ error: "admin" }, 403);
-      await this.wipe("close");
+      // Issue facultative, anonyme : la personne a-t-elle été retrouvée ?
+      await this.wipe("close", ["found", "not-found"].includes(b.outcome) ? b.outcome : null);
       return json({ ok: true });
     }
     if (url.pathname === "/sector/start" || url.pathname === "/sector/stop") {
@@ -262,6 +326,8 @@ export class Search extends DurableObject {
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), t: Date.now() };
       this.state.points[id] = point;
+      this.stats().points++;
+      await this.ctx.storage.put("meta", this.meta);
       await this.save("point", `Signalement${point.who ? " de " + point.who : ""} à ${lat.toFixed(5)}, ${lng.toFixed(5)} : ${point.txt}`);
       return json({ ok: true, id });
     }
@@ -279,10 +345,12 @@ export class Search extends DurableObject {
   async webSocketMessage(ws, msg) {
     if (msg === "ping") return ws.send("pong");
     if (typeof msg === "string" && msg.startsWith("auth ")) {
-      const role = this.roleOf(msg.slice(5));
+      const [, token, device] = msg.split(" ");
+      const role = this.roleOf(token);
       if (!role) return ws.close(4003, "lien");
       await this.noteVolunteer(role);
       ws.serializeAttachment({ role });
+      if (role === "vol") await this.noteDevice(clip(device, 40));
       ws.send(JSON.stringify({ role, ...this.publicState(), ...(role === "coord" && { vol: this.meta.vol }) }));
     }
   }
@@ -305,6 +373,7 @@ async function createSearch(req, env) {
     description: clip(b.description, 1000), phone: clip(b.phone, 20).replace(/[^\d+ ]/g, ""), whatsapp,
     hasPhoto: !!photo, created: Date.now(), test: b.test === true,
   };
+  if (isFinite(b.sinceTs) && b.sinceTs > info.created - IDLE_MS && b.sinceTs < info.created + 3600e3) info.sinceTs = +b.sinceTs;
   const coord = randomToken(), vol = randomToken();
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = randomCode();
@@ -325,6 +394,7 @@ async function handle(req, env) {
     if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
     if (url.pathname === "/api/admin/stats") return adminStats(env);
     if (url.pathname === "/api/admin/searches") return adminSearches(env);
+    if (url.pathname === "/api/admin/history") return json({ history: await registryStub(env).history() });
     if (url.pathname === "/api/admin/close" && req.method === "POST") return adminCloseSearch(req, env);
     return json({ error: "not found" }, 404);
   }

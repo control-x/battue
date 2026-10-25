@@ -14,7 +14,7 @@
   .admin h2 small{font:600 1rem Archivo,system-ui,sans-serif;text-transform:none;color:var(--ink-2)}
   .scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-  th,td{padding:.6rem .5rem;border-bottom:1px solid #d8d8d3;text-align:right;vertical-align:middle}
+  th,td{padding:.6rem .5rem;border-bottom:1px solid #d8d8d3;text-align:right;vertical-align:middle;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
   thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.85rem;border-bottom:2px solid var(--ink)}
   td.code{font-weight:800;font-stretch:85%;letter-spacing:.04em;font-size:1.1rem}
@@ -36,6 +36,10 @@
   .closeform{display:flex;gap:.6rem;align-items:flex-end;flex-wrap:wrap}
   .closeform label{margin:0;flex:1 1 12rem}
   .empty{padding:1.25rem 0;color:var(--ink-2)}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:.5rem;margin:0 0 1.5rem}
+  .kpis div{background:var(--sheet);border:2px solid var(--ink);padding:.8rem .9rem}
+  .kpis b{display:block;font:800 1.9rem/1 Archivo,system-ui,sans-serif;font-stretch:72%;font-variant-numeric:tabular-nums}
+  .kpis span{font-size:.9rem;color:var(--ink-2)}
   .legendline{font-size:.95rem;color:var(--ink-2);margin:.75rem 0 0}
 </style>
 </head>
@@ -62,6 +66,14 @@
       <button class="btn btn-primary" type="submit">Fermer</button>
     </form>
     <p class="msg" id="closemsg" role="status"></p>
+  </section>
+
+  <section>
+    <h2>Historique <small id="histcount"></small></h2>
+    <p>Gardé après l'effacement des battues. Aucune donnée personnelle&nbsp;: ni nom, ni adresse, ni position, ni code de battue&nbsp;; seulement le jour, le département et des nombres.</p>
+    <div id="histsum"></div>
+    <div class="scroll" id="history"><p class="empty">Chargement…</p></div>
+    <p><button class="btn" type="button" id="csv" hidden>Exporter en CSV</button></p>
   </section>
 
   <section>
@@ -119,6 +131,7 @@ document.getElementById("closeform").onsubmit=function(e){
   closeSearch(input.value.trim(),function(){input.value="";loadSearches();});
 };
 function closeSearch(id,done){
+  var after=done; done=function(){after();loadHistory();};
   var msg=document.getElementById("closemsg");
   msg.className="msg"; msg.textContent="Fermeture de "+id+"…";
   api("close",{id:id}).then(function(j){
@@ -126,6 +139,49 @@ function closeSearch(id,done){
     done();
   }).catch(function(err){msg.className="msg err";msg.textContent=err.message;});
 }
+
+// Historique anonyme des battues terminées
+function dur(m){if(m==null)return "–";if(m<60)return m+" min";if(m<1440)return Math.floor(m/60)+" h "+("0"+m%60).slice(-2);return Math.floor(m/1440)+" j "+Math.floor(m%1440/60)+" h";}
+function median(values){var v=values.filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});if(!v.length)return null;var k=Math.floor(v.length/2);return v.length%2?v[k]:Math.round((v[k-1]+v[k])/2);}
+var REASONS={close:"clôture","admin-close":"admin",expire:"30 jours"}, OUTCOMES={found:"retrouvée","not-found":"non retrouvée"};
+var COLUMNS=[["day","Jour"],["departement","Dépt"],["durationMin","Durée"],["launchDelayMin","Lancée après"],["firstVolunteerMin","1er bénévole"],["phones","Téléphones"],["peakOnline","Pic en ligne"],["teams","Binômes"],["sectorsDone","Carreaux faits"],["sectorsAlert","À revoir"],["lateReturns","Retards"],["points","Signalements"],["reason","Fin"],["outcome","Issue"]];
+var HISTORY=[];
+function loadHistory(){
+  var box=document.getElementById("history");
+  api("history").then(function(j){
+    HISTORY=j.history;
+    document.getElementById("histcount").textContent=HISTORY.length?HISTORY.length+" battue"+(HISTORY.length>1?"s":""):"";
+    document.getElementById("csv").hidden=!HISTORY.length;
+    if(!HISTORY.length){box.innerHTML='<p class="empty">Aucune battue terminée pour l\'instant.</p>';document.getElementById("histsum").innerHTML="";return;}
+    var pick=function(k){return HISTORY.map(function(h){return h[k];});};
+    var answered=HISTORY.filter(function(h){return h.outcome;}), found=answered.filter(function(h){return h.outcome==="found";}).length;
+    document.getElementById("histsum").innerHTML='<div class="kpis">'+
+      '<div><b>'+HISTORY.length+'</b><span>battues terminées</span></div>'+
+      '<div><b>'+(answered.length?found+" / "+answered.length:"–")+'</b><span>personnes retrouvées (réponses)</span></div>'+
+      '<div><b>'+dur(median(pick("durationMin")))+'</b><span>durée médiane</span></div>'+
+      '<div><b>'+dur(median(pick("launchDelayMin")))+'</b><span>lancée après la disparition</span></div>'+
+      '<div><b>'+dur(median(pick("firstVolunteerMin")))+'</b><span>jusqu\'au 1er bénévole</span></div>'+
+      '<div><b>'+(median(pick("phones"))==null?"–":median(pick("phones")))+'</b><span>téléphones bénévoles (médiane)</span></div>'+
+      '<div><b>'+(HISTORY.reduce(function(n,h){return n+(h.sectorsDone||0);},0)*0.25).toLocaleString("fr-FR")+' km²</b><span>fouillés au total</span></div>'+
+    '</div>';
+    box.innerHTML='<table><thead><tr>'+COLUMNS.map(function(c){return "<th>"+c[1]+"</th>";}).join("")+'</tr></thead><tbody>'+
+      HISTORY.map(function(h){return '<tr>'+COLUMNS.map(function(c){
+        var v=h[c[0]];
+        if(c[0]==="day")v=v?new Date(v+"T12:00").toLocaleDateString("fr-FR"):"–";
+        else if(/Min$/.test(c[0]))v=dur(v);
+        else if(c[0]==="sectorsDone")v=v+" ("+(v*0.25).toLocaleString("fr-FR")+" km²)";
+        else if(c[0]==="reason")v=REASONS[v]||v;
+        else if(c[0]==="outcome")v=OUTCOMES[v]||"–";
+        else if(v==null)v="–";
+        return "<td>"+esc(v)+"</td>";
+      }).join("")+'</tr>';}).join("")+'</tbody></table>';
+  }).catch(function(err){fail(box,err);});
+}
+document.getElementById("csv").onclick=function(){
+  var keys=COLUMNS.map(function(c){return c[0];}).concat(["activeMin","firstSectorMin","hadPhoto","hadWhatsapp"]);
+  var csv=keys.join(";")+"\n"+HISTORY.map(function(h){return keys.map(function(k){return h[k]==null?"":String(h[k]).replace(/;/g,",");}).join(";");}).join("\n")+"\n";
+  var a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"})); a.download="historique-battue.csv"; a.click();
+};
 
 // Compteurs (Analytics Engine)
 var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["selftest-ko","Tests automatiques en échec"]];
@@ -141,7 +197,7 @@ function loadCounters(){
 }
 
 if(!TOKEN){var m=document.getElementById("msg");m.textContent="Lien incomplet : ouvrez /admin#t=<jeton admin>.";m.className="msg err";}
-else{loadSearches();loadCounters();setInterval(loadSearches,60000);}
+else{loadSearches();loadHistory();loadCounters();setInterval(loadSearches,60000);}
 </script>
 </body>
 </html>

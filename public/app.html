@@ -123,6 +123,9 @@
   .rules{padding-left:1.3rem;margin:.5rem 0 1rem}
   .rules li{margin:.4rem 0;padding-left:.2rem}
   .rules li::marker{color:var(--grid);font-weight:800}
+  .outcome{border:0;margin:0 0 .75rem;padding:0}
+  .outcome legend{font:800 1.05rem/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin-bottom:.5rem;padding:0}
+  .outcome label.check{display:inline-flex;margin:0 1.5rem .4rem 0;align-items:center}
   .dlabel{font:800 1.05rem/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin:1rem 0 .25rem}
 
   #toast{position:absolute;z-index:1002;left:10px;right:10px;top:calc(76px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--sheet);border:3px dashed var(--grid);box-shadow:var(--shadow);font-weight:700}
@@ -264,6 +267,12 @@
   <hr>
   <button id="journal" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-download"/></svg>Exporter le journal (police)</button>
   <hr>
+  <fieldset class="outcome">
+    <legend>La personne a-t-elle été retrouvée&nbsp;?</legend>
+    <label class="check"><input type="radio" name="outcome" value="found"> Oui</label>
+    <label class="check"><input type="radio" name="outcome" value="not-found"> Non</label>
+    <p class="msg">Facultatif et anonyme&nbsp;: seulement pour mesurer l'utilité de Battue.</p>
+  </fieldset>
   <button id="close" class="btn btn-primary" type="button">Clôturer la recherche</button>
   <div class="msg" id="closemsg">La clôture supprime toutes les données, journal compris&nbsp;: exportez-le avant.</div>
   <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
@@ -553,7 +562,7 @@ var ws=null, wsLive=false;
 function connectWs(){
   if(!TOKEN||(ws&&ws.readyState<2))return;
   ws=new WebSocket(location.origin.replace(/^http/,"ws")+API+"/ws");
-  ws.onopen=function(){ws.send("auth "+TOKEN);wsLive=true;var maj=document.getElementById("maj");maj.textContent="En direct";maj.className="live";};
+  ws.onopen=function(){ws.send("auth "+TOKEN+" "+DEVICE);wsLive=true;var maj=document.getElementById("maj");maj.textContent="En direct";maj.className="live";};
   ws.onmessage=function(e){if(e.data!=="pong")applyState(JSON.parse(e.data));};
   ws.onclose=function(e){
     wsLive=false; document.getElementById("maj").className="";
@@ -755,7 +764,8 @@ function setupCoordinator(){
   var closeBtn=document.getElementById("close"), armed=false;
   closeBtn.onclick=function(){
     if(!armed){armed=true;closeBtn.textContent="Confirmer : tout supprimer";return;}
-    post("/close",{}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
+    var picked=document.querySelector("input[name=outcome]:checked");
+    post("/close",{outcome:picked?picked.value:""}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
       .catch(function(err){document.getElementById("closemsg").textContent=err.message;});
   };
   if(justCreated)dlg.showModal();

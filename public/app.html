@@ -209,7 +209,7 @@
   <div class="legend cartouche">
     <div class="sos">Urgence <a href="tel:17" aria-label="Appeler le 17">17</a><a href="tel:112" aria-label="Appeler le 112">112</a><span id="maj"></span></div>
     <div id="clock"></div>
-    <div id="info">Touchez un carreau</div>
+    <div id="info">Touchez une zone</div>
     <button id="sum" type="button" hidden></button>
     <div id="list" hidden></div>
     <div class="keys" aria-label="Légende">
@@ -243,7 +243,7 @@
     <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
     <li>N'entrez pas chez les gens.</li>
     <li>Jamais de berge seul, ni la nuit.</li>
-    <li>Commencez votre carreau sur la carte en partant, terminez-le en rentrant.</li>
+    <li>Commencez votre zone sur la carte en partant, terminez-la en rentrant.</li>
   </ol>
   <button id="poster-img" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-send"/></svg>Partager l'affiche (image)</button>
   <button id="print" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-printer"/></svg>Imprimer l'affiche (PDF)</button>
@@ -263,7 +263,7 @@
   <p id="psince" class="desc"></p>
   <p id="pdesc" class="desc"></p>
   <p id="pcall" class="call"></p>
-  <div class="qr"><img id="pqr" alt="QR code vers la carte des bénévoles" hidden><div>Pour aider à la recherche,<br>scannez ce code&nbsp;: carte des secteurs<br>et consignes pour les bénévoles.</div></div>
+  <div class="qr"><img id="pqr" alt="QR code vers la carte des bénévoles" hidden><div>Pour aider à la recherche,<br>scannez ce code&nbsp;: carte des zones<br>et consignes pour les bénévoles.</div></div>
 </section>
 
 <dialog id="dwelcome">
@@ -276,9 +276,9 @@
     <li>Fouillez buissons, fossés, berges, abris de jardin, parkings.</li>
     <li>N'entrez pas chez les gens.</li>
     <li>Jamais de berge seul, ni la nuit.</li>
-    <li>Commencez votre carreau sur la carte en partant, terminez-le en rentrant.</li>
+    <li>Commencez votre zone sur la carte en partant, terminez-la en rentrant.</li>
   </ol>
-  <button id="wgo" class="btn btn-go btn-big" type="button">C'est parti&nbsp;: choisir un carreau</button>
+  <button id="wgo" class="btn btn-go btn-big" type="button">C'est parti&nbsp;: choisir une zone</button>
   <div class="msg" id="wmsg"></div>
 </dialog>
 
@@ -470,21 +470,21 @@ function openCell(id,errMsg,errMsg2){
   var s=sectorStatus[id]||{}, k=s.s||"todo", c=cells[id].center;
   var gm="https://www.google.com/maps/dir/?api=1&destination="+c.lat.toFixed(5)+","+c.lng.toFixed(5)+"&travelmode=walking";
   var link=volLink().replace("#","?s="+id+"#");
-  var waText="Secteur "+id+(INFO.name?" pour retrouver "+INFO.name:"")+" : "+link;
+  var waText="Zone "+id+(INFO.name?" pour retrouver "+INFO.name:"")+" : "+link;
   // En haut : l'état et l'action principale ; en bas, les outils secondaires
-  var html='<div class="pop"><h3>Carreau '+id+(cells[id].prio?' <span class="prio">Prioritaire</span>':'')+'</h3><div class="state">'+statusLine(s)+'</div>'+
+  var html='<div class="pop"><h3>Zone '+id+(cells[id].prio?' <span class="prio">Prioritaire</span>':'')+'</h3><div class="state">'+statusLine(s)+'</div>'+
     (s.n?'<div>'+esc(s.n)+'</div>':'');
   if(k==="doing"&&isMine(id)){
     html+='<textarea id="fn" placeholder="Note : affiches posées, ce qui a été vu…">'+esc(s.n)+'</textarea>'+
-      '<button id="fstop" class="btn btn-done btn-big" type="button">'+icon("check")+'J\'ai terminé ce carreau</button>';
+      '<button id="fstop" class="btn btn-done btn-big" type="button">'+icon("check")+'J\'ai terminé cette zone</button>';
   }else if(k==="doing"){
-    html+='<div class="msg">Seul le binôme qui l\'a commencé peut le terminer.</div>';
+    html+='<div class="msg">Seule l\'équipe qui l\'a commencée peut la terminer.</div>';
   }else if(k==="done"){
-    html+='<div class="msg">Carreau terminé. Seul le coordinateur peut le rouvrir.</div>';
+    html+='<div class="msg">Zone terminée. Seul le coordinateur peut la rouvrir.</div>';
   }else{
     html+=whoField("fe",team(),"Vos prénoms, ex. Marc + Julie")+
       '<label>Durée prévue<select id="fp"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select></label>'+
-      '<button id="fstart" class="btn btn-go btn-big" type="button">'+icon("play")+'Je pars sur ce carreau</button>';
+      '<button id="fstart" class="btn btn-go btn-big" type="button">'+icon("play")+'Je pars sur cette zone</button>';
   }
   html+='<div class="msg" id="fmsg"></div><div class="more">'+
     '<div class="links"><a href="'+gm+'" target="_blank" rel="noopener">'+icon("route")+'Itinéraire</a>'+
@@ -492,7 +492,7 @@ function openCell(id,errMsg,errMsg2){
     '<a href="#" id="cp">'+icon("copy")+'Copier</a></div>'+
     '<div class="sos">Urgence <a href="tel:17" aria-label="Appeler le 17">17</a><a href="tel:112" aria-label="Appeler le 112">112</a></div>';
   if(k==="todo"||k==="alert"){
-    html+='<details id="fpast"><summary>J\'ai déjà fouillé ce carreau</summary>'+
+    html+='<details id="fpast"><summary>J\'ai déjà fouillé cette zone</summary>'+
       '<div class="row"><label>Début<input id="pd" type="time"></label>'+
       '<label>Fin<input id="pf" type="time" value="'+nowHHMM()+'"></label></div>'+
       '<textarea id="pn" placeholder="Note : affiches posées, ce qui a été vu…"></textarea>'+
@@ -533,19 +533,19 @@ function openCell(id,errMsg,errMsg2){
     var d=$("pd").value, f=$("pf").value;
     if(!d||!f){say(m,"Indiquez l'heure de début et de fin.",true);return;}
     say(m,"Enregistrement…");
-    post("/sector/done",{id:id,e:who,d:d,f:f,n:$("pn").value}).then(saved("Carreau "+id+" enregistré comme fait. Merci !")).catch(failed);
+    post("/sector/done",{id:id,e:who,d:d,f:f,n:$("pn").value}).then(saved("Zone "+id+" enregistrée comme fouillée. Merci !")).catch(failed);
   };
   if(bStart)bStart.onclick=function(){
     var who=firstName(); if(!who)return;
     say(m,"Enregistrement…");
     post("/sector/start",{id:id,e:who,o:DEVICE,p:+$("fp").value}).then(function(j){
-      var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved("Bonne recherche sur "+id+". En rentrant, touchez le carreau pour le terminer.")(j);
+      var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved("Bonne recherche sur "+id+". En rentrant, touchez la zone pour la terminer.")(j);
     }).catch(failed);
   };
   if(bStop)bStop.onclick=function(){
     say(m,"Enregistrement…");
     post("/sector/stop",{id:id,o:DEVICE,n:$("fn").value}).then(function(j){
-      var mm=mine(); delete mm[id]; ls("rc_mine",JSON.stringify(mm)); saved("Carreau "+id+" terminé. Merci !")(j);
+      var mm=mine(); delete mm[id]; ls("rc_mine",JSON.stringify(mm)); saved("Zone "+id+" terminée. Merci !")(j);
     }).catch(failed);
   };
   if(ROLE!=="coord")return;
@@ -557,7 +557,7 @@ function openCell(id,errMsg,errMsg2){
   $("fsave").onclick=function(){
     say(m2,"Enregistrement…");
     post("/sector",{id:id,s:$("fs").value,e:$("fe2").value,n:$("fn2").value,d:$("fd").value,f:$("ff").value})
-      .then(saved("Carreau "+id+" corrigé.")).catch(function(err){say(m2,err.message,true);});
+      .then(saved("Zone "+id+" corrigée.")).catch(function(err){say(m2,err.message,true);});
   };
 }
 function copy(text,el,done){
@@ -578,7 +578,7 @@ function renderList(){
   list.innerHTML=ids.map(function(id){return '<div data-id="'+id+'"><b>'+id+'</b> '+statusLine(sectorStatus[id])+(isMine(id)?' <b>(vous)</b>':'')+'</div>';}).join("");
   var info=document.getElementById("info"), myId=ids.filter(isMine)[0];
   if(myId){info.textContent="Vous êtes sur "+myId+" depuis "+hm(sectorStatus[myId].d)+" : terminer";info.className="mine";info.onclick=function(){map.fitBounds(cells[myId].b,{padding:[30,30]});openCell(myId);};}
-  else{info.className="";info.onclick=null;info.textContent=cells[focusId]?"Votre carreau : "+focusId:"Touchez un carreau pour le prendre";}
+  else{info.className="";info.onclick=null;info.textContent=cells[focusId]?"Votre zone : "+focusId:"Touchez une zone pour la prendre";}
 }
 document.getElementById("sum").onclick=function(){listOpen=!listOpen;renderList();};
 document.getElementById("list").onclick=function(e){
@@ -776,7 +776,7 @@ function drawPoster(){
     ctx.font="800 76px Archivo, sans-serif";
     ctx.fillText(INFO.phone||"17",M,bandTop+68);
     ctx.font="500 28px Archivo, sans-serif";
-    wrapText(ctx,"Pour aider à chercher, scannez le code : carte des secteurs et consignes.",M,bandTop+165,W-2*M-240,34,2);
+    wrapText(ctx,"Pour aider à chercher, scannez le code : carte des zones et consignes.",M,bandTop+165,W-2*M-240,34,2);
     return new Promise(function(ok){c.toBlob(ok,"image/png");});
   });
 }
@@ -852,7 +852,7 @@ function setupCoordinator(){
     (INFO.since?"Vu(e) pour la dernière fois "+fmtSince(INFO.since)+", "+INFO.address:"Dernier lieu connu : "+INFO.address)+"\n"+
     (INFO.description?INFO.description+"\n":"")+
     (INFO.phone?"Si vous la ou le voyez : appelez le "+INFO.phone+"\n":"")+
-    "\nRejoignez la recherche, choisissez un secteur sur la carte :\n"+volLink+"\n\n"+
+    "\nRejoignez la recherche, choisissez une zone sur la carte :\n"+volLink+"\n\n"+
     "Consignes : regarder sans appeler son nom, fouiller buissons, fossés et berges, ne pas entrer chez les gens, jamais de berge seul ni la nuit.";
   document.getElementById("share").onclick=function(){
     // Sur téléphone, le partage natif joint la photo ; sinon on ouvre WhatsApp avec le texte seul

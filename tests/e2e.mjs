@@ -55,10 +55,10 @@ await silent.opened;
 const silentCode = await within(silent.closed, 40000);
 check(silentCode === 4001 && silent.messages.length === 0, `websocket : connexion sans authentification refermée (reçu ${silentCode})`);
 
-// Deux téléphones prennent le même carreau au même instant : un seul l'obtient
+// Deux téléphones prennent la même zone au même instant : un seul l'obtient
 const [first, second] = await Promise.all(["appareil-1", "appareil-2"].map((device) =>
   api(`/api/r/${search.id}/sector/start`, { method: "POST", token: search.vol, body: { id: "G7", e: device, o: device, p: 60 } })));
-check([first.status, second.status].sort().join() === "200,409", `carreau pris en même temps : un succès, un refus (${first.status}, ${second.status})`);
+check([first.status, second.status].sort().join() === "200,409", `zone prise en même temps : un succès, un refus (${first.status}, ${second.status})`);
 
 // Signalement hors bornes refusé, signalement valide accepté
 check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 120, lng: 2.3, txt: "x" } })).status === 400, "signalement hors bornes refusé");

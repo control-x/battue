@@ -381,31 +381,31 @@ export class Search extends DurableObject {
       let meta;
       if (url.pathname === "/sector/start") {
         if (cur?.s === "doing" && cur.o !== owner)
-          return json({ error: "Secteur déjà en cours" + (cur.e ? " par " + cur.e : "") + " depuis " + cur.d }, 409);
+          return json({ error: "Zone déjà en cours" + (cur.e ? " par " + cur.e : "") + " depuis " + cur.d }, 409);
         if (cur?.s === "done" && !isAdmin) return json({ error: "admin" }, 403);
         // p : durée prévue en minutes, pour signaler les binômes en retard
         meta = { s: "doing", e: clip(b.e, 60), n: cur?.n || "", d: nowParis(), f: "", ds: Date.now(), p: Math.min(240, Math.max(0, Math.round(+b.p || 0))), o: owner, t: Date.now() };
       } else {
-        if (cur?.s !== "doing") return json({ error: "Ce secteur n'est pas en cours" }, 409);
+        if (cur?.s !== "doing") return json({ error: "Cette zone n'est pas en cours" }, 409);
         if (cur.o !== owner) return json({ error: "Seule la personne qui a commencé peut terminer" }, 403);
         meta = { ...cur, s: "done", n: b.n == null ? cur.n : clip(b.n, 300), f: nowParis(), t: Date.now() };
       }
       this.state.secteurs[b.id] = meta;
       await this.save("sector", meta.s === "doing"
-        ? `Secteur ${b.id} commencé par ${meta.e}` + (meta.p ? ` (prévu ${meta.p} min)` : "")
-        : `Secteur ${b.id} terminé par ${meta.e}` + (meta.n ? ` ; note : ${meta.n}` : ""));
+        ? `Zone ${b.id} commencée par ${meta.e}` + (meta.p ? ` (prévu ${meta.p} min)` : "")
+        : `Zone ${b.id} terminée par ${meta.e}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       const { o, ...pub } = meta;
       return json({ ok: true, meta: pub });
     }
     if (url.pathname === "/sector/done") {
       if (!validId(b.id)) return json({ error: "id" }, 400);
       const cur = this.state.secteurs[b.id];
-      if (cur?.s === "doing") return json({ error: "Secteur en cours" + (cur.e ? " par " + cur.e : "") }, 409);
+      if (cur?.s === "doing") return json({ error: "Zone en cours" + (cur.e ? " par " + cur.e : "") }, 409);
       if (cur?.s === "done" && !isAdmin) return json({ error: "admin" }, 403);
       if (!hhmm(b.d) || !hhmm(b.f)) return json({ error: "Indiquez l'heure de début et de fin" }, 400);
       const meta = { s: "done", e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
       this.state.secteurs[b.id] = meta;
-      await this.save("sector", `Secteur ${b.id} déclaré fait par ${meta.e}, de ${meta.d} à ${meta.f}` + (meta.n ? ` ; note : ${meta.n}` : ""));
+      await this.save("sector", `Zone ${b.id} déclarée fouillée par ${meta.e}, de ${meta.d} à ${meta.f}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       return json({ ok: true, meta });
     }
     if (url.pathname === "/sector") {
@@ -414,7 +414,7 @@ export class Search extends DurableObject {
       if (!["todo", "doing", "done", "alert"].includes(b.s)) return json({ error: "s" }, 400);
       const meta = { s: b.s, e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
       this.state.secteurs[b.id] = meta;
-      await this.save("sector", `Secteur ${b.id} corrigé par le coordinateur : ${STATUS_LABELS[b.s]}` + (meta.e ? `, ${meta.e}` : "") + (meta.n ? ` ; note : ${meta.n}` : ""));
+      await this.save("sector", `Zone ${b.id} corrigée par le coordinateur : ${STATUS_LABELS[b.s]}` + (meta.e ? `, ${meta.e}` : "") + (meta.n ? ` ; note : ${meta.n}` : ""));
       return json({ ok: true, meta });
     }
     if (url.pathname === "/point") {

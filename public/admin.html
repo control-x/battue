@@ -57,7 +57,7 @@
   <section>
     <h2>Battues ouvertes <small id="opencount"></small></h2>
     <div class="scroll" id="searches"><p class="empty">Chargement…</p></div>
-    <p class="legendline">Carreaux : <i class="sw doing"></i> en cours, <i class="sw done"></i> faits, <i class="sw alert"></i> à revoir. Parcours : <span class="steps"><i class="on"></i><i></i><i></i></span> créée, puis premier bénévole, puis premier carreau. Les battues sans activité depuis 30 jours s'effacent seules.</p>
+    <p class="legendline">Zones : <i class="sw doing"></i> en cours, <i class="sw done"></i> faits, <i class="sw alert"></i> à revoir. Parcours : <span class="steps"><i class="on"></i><i></i><i></i></span> créée, puis premier bénévole, puis première zone. Les battues sans activité depuis 30 jours s'effacent seules.</p>
   </section>
 
   <section>
@@ -108,7 +108,7 @@ function loadSearches(){
   api("searches").then(function(j){
     document.getElementById("opencount").textContent=j.searches.length?j.searches.length+" en cours":"";
     if(!j.searches.length){box.innerHTML='<p class="empty">Aucune battue ouverte.</p>';return;}
-    box.innerHTML='<table><thead><tr><th>Code</th><th>Ouverte depuis</th><th>Dernière activité</th><th>Bénévoles en ligne</th><th>Carreaux</th><th>Signalements</th><th>Parcours</th><th></th></tr></thead><tbody>'+
+    box.innerHTML='<table><thead><tr><th>Code</th><th>Ouverte depuis</th><th>Dernière activité</th><th>Bénévoles en ligne</th><th>Zones</th><th>Signalements</th><th>Parcours</th><th></th></tr></thead><tbody>'+
       j.searches.map(function(s){
         // Ouverte depuis plus de 30 min sans aucun bénévole : l'invitation n'a probablement pas fonctionné
         var stuck=!s.volunteerSeen&&Date.now()-s.created>30*60000;
@@ -149,7 +149,7 @@ function closeSearch(id,done){
 function dur(m){if(m==null)return "–";if(m<60)return m+" min";if(m<1440)return Math.floor(m/60)+" h "+("0"+m%60).slice(-2);return Math.floor(m/1440)+" j "+Math.floor(m%1440/60)+" h";}
 function median(values){var v=values.filter(function(x){return x!=null;}).sort(function(a,b){return a-b;});if(!v.length)return null;var k=Math.floor(v.length/2);return v.length%2?v[k]:Math.round((v[k-1]+v[k])/2);}
 var REASONS={close:"clôture","admin-close":"admin",expire:"30 jours"}, OUTCOMES={found:"retrouvée","not-found":"non retrouvée"}, BY_BATTUE={yes:"oui",no:"non",unknown:"ne sait pas"};
-var COLUMNS=[["day","Jour"],["departement","Dépt"],["durationMin","Durée"],["launchDelayMin","Lancée après"],["firstVolunteerMin","1er bénévole"],["phones","Téléphones"],["peakOnline","Pic en ligne"],["teams","Binômes"],["sectorsDone","Carreaux faits"],["sectorsAlert","À revoir"],["lateReturns","Retards"],["points","Signalements"],["reason","Fin"],["outcome","Issue"],["foundByBattue","Grâce à la battue"]];
+var COLUMNS=[["day","Jour"],["departement","Dépt"],["durationMin","Durée"],["launchDelayMin","Lancée après"],["firstVolunteerMin","1er bénévole"],["phones","Téléphones"],["peakOnline","Pic en ligne"],["teams","Binômes"],["sectorsDone","Zones fouillées"],["sectorsAlert","À revoir"],["lateReturns","Retards"],["points","Signalements"],["reason","Fin"],["outcome","Issue"],["foundByBattue","Grâce à la battue"]];
 var HISTORY=[];
 function loadHistory(){
   var box=document.getElementById("history");
@@ -204,7 +204,7 @@ document.getElementById("csv").onclick=function(){
 };
 
 // Compteurs (Analytics Engine)
-var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec un premier carreau"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de carreaux"],["point","Signalements"],["abuse-report","Signalements d'abus"],["selftest-ko","Tests automatiques en échec"]];
+var ROWS=[["create","Battues créées"],["first-volunteer","… avec un premier bénévole"],["first-sector","… avec une première zone"],["close","Clôturées par le coordinateur"],["admin-close","Fermées par l'admin"],["expire","Effacées après 30 jours"],["no-volunteer","Alertes « aucun bénévole »"],["sector","Mises à jour de zones"],["point","Signalements"],["abuse-report","Signalements d'abus"],["selftest-ko","Tests automatiques en échec"]];
 function loadCounters(){
   var box=document.getElementById("counters");
   api("stats").then(function(j){

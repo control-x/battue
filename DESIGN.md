@@ -224,7 +224,7 @@ Chaque taille est une variable `--fs-*` de `style.css` (headline, heading, title
 
 ## Layout
 
-L'unité est le carreau. Sur l'accueil, un cadre de marge (`margin`, 28 px, 36 px dès 760 px) entoure le plan ; le quadrillage suit `cell` (64 px, 80 px dès 760 px) et les lettres/numéros occupent la marge, centrés sur chaque carreau. Le cartouche d'action se pose au tiers inférieur sur mobile (au pouce), en bas à gauche sur grand écran (31rem max). Le contenu éditorial suit en colonne unique (44rem, sections espacées de 4rem) ; la création en colonne de 36rem.
+L'unité est le carreau. Sur l'accueil, un cadre de marge (`margin`, 28 px, 36 px dès 760 px) entoure le plan ; le quadrillage suit `cell` (64 px, 80 px dès 760 px) et les lettres/numéros occupent la marge, centrés sur chaque carreau. Le cartouche d'action se pose au tiers inférieur sur mobile (au pouce), en bas à gauche sur grand écran (31rem max). Sous le plan, l'accueil se lit comme le dos du plan, en panneaux (68rem, sections espacées de 5rem, 3.5rem sur mobile) : les trois étapes côte à côte, numéro rouge et référence, avec la légende rattachée en dessous ; « Les bons réflexes » dans un cartouche avec le 17/112 ; « Préparer à l'avance » sur un panneau quadrillé où les textes sont posés en feuilles blanches ; puis la confiance en deux colonnes et l'action. Les pages de texte restent en colonne de 44rem ; la création en colonne de 36rem.
 
 La carte est plein écran : barre d'outils blanche en haut (filet noir dessous), index de marge vivant collé aux bords haut (22 px) et gauche (24 px), et en bas à droite un dock au pouce : bouton « Signaler » au-dessus du cartouche de légende. Le dock s'efface quand une fiche est ouverte. Un seul point de rupture d'interface par page : 640 px (carte) ou 760 px (accueil).
 
@@ -282,8 +282,8 @@ Le même vocabulaire en trois tailles (carte Leaflet, démo de l'accueil, pastil
 ### Index de marge
 Bandes semi-opaques blanches (88 %) aux bords de la carte, lettres et numéros en rouge plan 800 condensé, recalculés à chaque déplacement ; sur l'accueil, cadre blanc lettré sur les quatre côtés.
 
-### Index « comme au dos du plan »
-Listes de type index des rues : terme en gras, points de conduite pointillés, référence en rouge capitales tabulaires, filet encre en tête et filets fins entre lignes.
+### Étapes « comme au dos du plan »
+Trois colonnes (une sur mobile) sous un filet encre de 2 px : grand numéro rouge condensé, référence en rouge capitales à droite, titre en capitales condensées, explication en encre seconde.
 
 ### Navigation
 Marque (carreau 2 × 2 à filet noir : un quart hachuré vert, un quart jaune, filets rouges) + nom en capitales condensées. Accueil : marque et « Mode d'emploi » en étiquettes blanches à filet noir. Création : barre blanche à filet noir dessous. Carte : barre d'outils, marque seule sous 640 px.

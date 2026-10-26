@@ -122,14 +122,6 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 .page section+section{margin-top:4rem}
 .page section>p{max-width:62ch}
 
-/* Index : comme l'index des rues au dos du plan */
-.index{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
-.index li{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:.5rem;padding:1rem 0;border-bottom:1px solid var(--hairline)}
-.index b{font-size:var(--fs-title);font-stretch:85%}
-.index .dots{border-bottom:2px dotted var(--dots);transform:translateY(-.3em)}
-.index .ref{font-weight:800;font-stretch:80%;color:var(--grid);text-transform:uppercase;font-variant-numeric:tabular-nums}
-.index p{grid-column:1/-1;margin:.25rem 0 0;color:var(--ink-2)}
-
 /* Légende : les états d'un carreau, comme la légende du plan */
 .legende{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem 1.5rem;margin:0;padding:0;list-style:none}
 .legende li{display:flex;gap:.85rem;align-items:center}
@@ -148,6 +140,55 @@ label.check input{width:28px;height:28px;margin:0;flex:none;accent-color:var(--g
 .imprint{border-top:2px solid var(--ink);margin-top:4rem;padding-top:1.25rem;color:var(--ink-2);font-size:var(--fs-base)}
 .imprint .brand{font-size:var(--fs-title);margin-bottom:.6rem}
 .imprint p{margin:.4rem 0;max-width:62ch}
+
+/* Accueil, sous le plan : le dos du plan, en panneaux */
+.btn-go{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn-go:hover{background:var(--ink-soft)}
+.home{max-width:68rem;padding-top:3.5rem}
+.home section+section{margin-top:3.5rem}
+.home h3{font:800 var(--fs-title)/1.1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .5rem}
+.home p{margin:0 0 1rem}
+
+/* Trois étapes : le numéro rouge de l'index, la référence à droite */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:1.75rem}
+.steps li{display:grid;grid-template-columns:auto 1fr;align-items:end;align-content:start;column-gap:.75rem;border-top:2px solid var(--ink);padding-top:.75rem}
+.steps .step-n{font:800 3rem/.85 Archivo,system-ui,sans-serif;font-stretch:66%;color:var(--grid);font-variant-numeric:tabular-nums}
+.steps .ref{justify-self:end;font:800 var(--fs-small)/1 Archivo,system-ui,sans-serif;font-stretch:80%;color:var(--grid);text-transform:uppercase;letter-spacing:.03em}
+.steps h3,.steps p{grid-column:1/-1}
+.steps h3{margin-top:.9rem}
+.steps p{color:var(--ink-2);margin:0}
+
+/* Légende rattachée aux étapes, en plus petit */
+.legend-block{margin-top:2.5rem;padding-top:1.25rem;border-top:1px solid var(--hairline)}
+.home .legende{gap:.9rem 1.5rem}
+.home .legende li{align-items:flex-start;font-size:var(--fs-base);line-height:1.35}
+.home .swatch{width:36px;height:36px}
+
+/* Réflexes : l'encadré qu'on garde sous les yeux */
+.reflexes-panel{padding:1.5rem 1.25rem}
+.reflexes-panel .urgence{margin:.25rem 0 1rem}
+.home .reflexes{margin:0;padding-left:1.6rem;counter-reset:none}
+.home .reflexes li{margin:0 0 .85rem;padding-left:.35rem}
+.home .reflexes li::marker{font-size:var(--fs-title);font-stretch:70%}
+
+/* Préparer : un carreau du plan, au calme */
+.prepare{display:grid;gap:.75rem 2.5rem;padding:.75rem;border:2px solid var(--ink);background:repeating-linear-gradient(90deg,transparent 0 calc(var(--cell) - 1px),var(--grid-soft) calc(var(--cell) - 1px) var(--cell)),repeating-linear-gradient(transparent 0 calc(var(--cell) - 1px),var(--grid-soft) calc(var(--cell) - 1px) var(--cell)),var(--paper)}
+.prepare>div{background:var(--sheet);padding:1rem 1.1rem .1rem}
+.prepare-side .row-actions{margin:0}
+
+.about-cols p{max-width:62ch}
+.home .imprint{margin-top:3.5rem}
+
+@media (min-width:760px){
+  .home{padding-top:5rem}
+  .home section+section{margin-top:5rem}
+  .steps{grid-template-columns:repeat(3,1fr);gap:2rem}
+  .home .legende{grid-template-columns:repeat(3,1fr)}
+  .reflexes-panel{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:2.5rem;padding:2rem}
+  .home .reflexes{font-size:var(--fs-body)}
+  .prepare{grid-template-columns:minmax(0,7fr) minmax(0,5fr);padding:2rem}
+  .about-cols{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem}
+}
 
 /* ---------- Création ---------- */
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem 1.25rem;background:var(--sheet);border-bottom:2px solid var(--ink)}

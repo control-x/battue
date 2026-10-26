@@ -65,22 +65,39 @@
   <p class="synthetic" aria-hidden="true">Exemple sur un plan fictif</p>
 </header>
 
-<main class="page">
-  <section id="comment">
+<main class="page home">
+  <section id="comment" class="how-it-works">
     <h2>Comment ça marche</h2>
-    <ol class="index">
-      <li><b>Vous créez la battue</b><span class="dots"></span><span class="ref">5 min</span>
+    <ol class="steps">
+      <li><span class="step-n" aria-hidden="true">1</span><span class="ref">5 min</span>
+        <h3>Vous créez la battue</h3>
         <p>Indiquez où et quand la personne a été vue pour la dernière fois, ajoutez une photo et un numéro à appeler. Battue découpe le quartier en petites zones numérotées autour de ce lieu.</p></li>
-      <li><b>Vous envoyez le lien</b><span class="dots"></span><span class="ref">WhatsApp, SMS</span>
+      <li><span class="step-n" aria-hidden="true">2</span><span class="ref">WhatsApp, SMS</span>
+        <h3>Vous envoyez le lien</h3>
         <p>Battue prépare le message à envoyer à vos proches et voisins&nbsp;: le lien, la photo et les consignes. Une affiche à imprimer est aussi prête.</p></li>
-      <li><b>Chacun fouille une zone</b><span class="dots"></span><span class="ref">En direct</span>
+      <li><span class="step-n" aria-hidden="true">3</span><span class="ref">En direct</span>
+        <h3>Chacun fouille une zone</h3>
         <p>Les bénévoles ouvrent le lien sur leur téléphone, sans rien installer. Chaque équipe choisit une zone, la marque en partant puis en revenant. Vous voyez quelle équipe fouille quelle zone, et laquelle tarde à revenir.</p></li>
     </ol>
+    <div class="legend-block">
+      <h3>Les couleurs de la carte</h3>
+      <ul class="legende">
+        <li><span class="swatch prio"></span><span><b>Prioritaire</b><br>Les zones autour du dernier lieu connu, à fouiller d'abord.</span></li>
+        <li><span class="swatch"></span><span><b>À faire</b><br>Personne n'y est encore allé.</span></li>
+        <li><span class="swatch doing"></span><span><b>En cours</b><br>Une équipe la fouille.</span></li>
+        <li><span class="swatch done"></span><span><b>Fait</b><br>Zone fouillée, avec l'heure et les notes.</span></li>
+        <li><span class="swatch alert"></span><span><b>Signalement</b><br>Quelque chose a été vu, à revoir.</span></li>
+        <li><span class="swatch late"></span><span><b>En retard</b><br>L'équipe dépasse la durée prévue.</span></li>
+      </ul>
+    </div>
   </section>
 
-  <section>
-    <h2>Les bons réflexes</h2>
-    <p>Une personne désorientée, par exemple atteinte de la maladie d'Alzheimer, est le plus souvent retrouvée près de son point de départ.</p>
+  <section class="reflexes-panel cartouche">
+    <div class="reflexes-head">
+      <h2>Les bons réflexes</h2>
+      <p>Une personne désorientée, par exemple atteinte de la maladie d'Alzheimer, est le plus souvent retrouvée près de son point de départ.</p>
+      <p class="urgence">Police&nbsp;: <a href="tel:17" aria-label="Appeler le 17">17</a> ou <a href="tel:112" aria-label="Appeler le 112">112</a></p>
+    </div>
     <ol class="reflexes">
       <li>N'attendez pas pour prévenir la police&nbsp;: il n'y a aucun délai à respecter, même pour un adulte.</li>
       <li>Cherchez d'abord près du dernier lieu connu.</li>
@@ -90,30 +107,24 @@
     </ol>
   </section>
 
-  <section id="preparer">
-    <h2>Préparer à l'avance</h2>
-    <p>Votre proche s'est déjà perdu, ou pourrait se perdre&nbsp;? Remplissez sa fiche au calme&nbsp;: photo, description, habitudes, anciens lieux de vie, endroits où on l'a déjà retrouvé. Le jour où il le faut, vous ouvrez la fiche et lancez la battue d'un bouton&nbsp;: tout est déjà rempli, et ces lieux apparaissent sur la carte, à visiter en priorité.</p>
-    <p>La fiche est chiffrée avant de quitter votre téléphone&nbsp;: seules les personnes à qui vous donnez son lien peuvent l'ouvrir. Même l'équipe de Battue ne peut pas la lire.</p>
-    <p class="row-actions"><a class="btn" href="/fiche">Créer une fiche</a> <a class="btn" id="myfiche" hidden>Ouvrir la fiche enregistrée ici</a></p>
+  <section id="preparer" class="prepare">
+    <div>
+      <h2>Préparer à l'avance</h2>
+      <p>Votre proche s'est déjà perdu, ou pourrait se perdre&nbsp;? Remplissez sa fiche au calme&nbsp;: photo, description, habitudes, anciens lieux de vie, endroits où on l'a déjà retrouvé. Le jour où il le faut, vous ouvrez la fiche et lancez la battue d'un bouton&nbsp;: tout est déjà rempli, et ces lieux apparaissent sur la carte, à visiter en priorité.</p>
+    </div>
+    <div class="prepare-side">
+      <p>La fiche est chiffrée avant de quitter votre téléphone&nbsp;: seules les personnes à qui vous donnez son lien peuvent l'ouvrir. Même l'équipe de Battue ne peut pas la lire.</p>
+      <p class="row-actions"><a class="btn btn-go" href="/fiche">Créer une fiche</a> <a class="btn" id="myfiche" hidden>Ouvrir la fiche enregistrée ici</a></p>
+    </div>
   </section>
 
-  <section>
+  <section class="about">
     <h2>Gratuit, sans inscription, effacé après la recherche</h2>
-    <p>Pas d'application à installer ni de compte à créer&nbsp;: les bénévoles ouvrent simplement le lien reçu par WhatsApp ou SMS. Battue ne localise pas la personne disparue&nbsp;: c'est un outil pour organiser ceux qui la cherchent. Les données de la recherche sont supprimées à sa clôture, ou après 30 jours sans activité.</p>
-    <p>Battue a été créé par <a href="https://www.linkedin.com/in/damiencirotteau/" rel="noopener">Damien Cirotteau</a> après la recherche d'un proche, en octobre 2026. C'est un outil bénévole, gratuit et à <a href="https://github.com/control-x/battue">code ouvert</a> (licence MIT).</p>
-    <p><a class="btn btn-primary" href="/nouvelle">Lancer une battue</a></p>
-  </section>
-
-  <section>
-    <h2>Les couleurs de la carte</h2>
-    <ul class="legende">
-      <li><span class="swatch prio"></span><span><b>Prioritaire</b><br>Les zones autour du dernier lieu connu, à fouiller d'abord.</span></li>
-      <li><span class="swatch"></span><span><b>À faire</b><br>Personne n'y est encore allé.</span></li>
-      <li><span class="swatch doing"></span><span><b>En cours</b><br>Une équipe la fouille.</span></li>
-      <li><span class="swatch done"></span><span><b>Fait</b><br>Zone fouillée, avec l'heure et les notes.</span></li>
-      <li><span class="swatch alert"></span><span><b>Signalement</b><br>Quelque chose a été vu, à revoir.</span></li>
-      <li><span class="swatch late"></span><span><b>En retard</b><br>L'équipe dépasse la durée prévue.</span></li>
-    </ul>
+    <div class="about-cols">
+      <p>Pas d'application à installer ni de compte à créer&nbsp;: les bénévoles ouvrent simplement le lien reçu par WhatsApp ou SMS. Battue ne localise pas la personne disparue&nbsp;: c'est un outil pour organiser ceux qui la cherchent. Les données de la recherche sont supprimées à sa clôture, ou après 30 jours sans activité.</p>
+      <p>Battue a été créé par <a href="https://www.linkedin.com/in/damiencirotteau/" rel="noopener">Damien Cirotteau</a> après la recherche d'un proche, en octobre 2026. C'est un outil bénévole, gratuit et à <a href="https://github.com/control-x/battue">code ouvert</a> (licence MIT).</p>
+    </div>
+    <p><a class="btn btn-primary btn-big" href="/nouvelle">Lancer une battue</a></p>
   </section>
 
   <footer class="imprint">

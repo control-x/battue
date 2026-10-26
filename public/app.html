@@ -87,8 +87,8 @@
   .leaflet-popup-content-wrapper{border-radius:3px;border:2px solid var(--ink);box-shadow:var(--shadow);padding:0}
   .leaflet-popup-tip{border:2px solid var(--ink);box-shadow:none}
   .leaflet-popup-content{margin:14px 16px;font:400 var(--fs-base)/1.4 Archivo,system-ui,sans-serif;min-width:230px}
-  .leaflet-container a.leaflet-popup-close-button{width:32px;height:32px;color:transparent;overflow:hidden}
-  .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:8px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
+  .leaflet-container a.leaflet-popup-close-button{width:44px;height:44px;color:transparent;overflow:hidden}
+  .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:12px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
   .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .pop h3 .prio{font-size:var(--fs-caption);letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
   .pop .state{margin:.2rem 0 .5rem}
@@ -115,14 +115,17 @@
 
   /* Fenêtres */
   dialog{border:2px solid var(--ink);border-radius:3px;box-shadow:0 10px 40px rgba(20,20,20,.35);width:min(28rem,calc(100vw - 24px));max-height:88vh;overflow:auto;padding:1.25rem;color:var(--ink)}
+  dialog:focus{outline:none}
   dialog::backdrop{background:rgba(20,20,20,.45)}
-  dialog h2{font-size:var(--fs-heading);margin-bottom:.75rem}
+  dialog h2{font-size:var(--fs-heading);margin-bottom:.75rem;padding-right:2.5rem}
+  /* Toutes les fenêtres se ferment pareil : croix en haut à droite, ou Échap */
+  .dclose,#toast .tclose{width:44px;height:44px;min-height:0;padding:0;border:0;background:transparent;color:var(--ink)}
+  .dclose{position:absolute;top:8px;right:8px}
   dialog img{display:block;border:2px solid var(--ink);margin:0 0 .75rem}
   dialog p{margin:.4rem 0}
   dialog .desc{white-space:pre-wrap}
   dialog .btn{width:100%;margin:.3rem 0}
   dialog hr{border:0;border-top:1px solid var(--hairline);margin:1rem 0}
-  dialog form[method=dialog] .btn{margin-top:.75rem}
   .rules{padding-left:1.3rem;margin:.5rem 0 1rem}
   .rules li{margin:.4rem 0;padding-left:.2rem}
   .rules li::marker{color:var(--grid);font-weight:800}
@@ -136,6 +139,9 @@
   #toast .i{color:var(--grid);width:24px;height:24px}
   #toast span{flex:1}
   #toast button{min-height:44px;padding:.4em .8em}
+  #toast.ok{border:2px solid var(--ink)}
+  #toast.ok .i{color:var(--park-ink)}
+  #toast .tclose .i{color:var(--ink)}
   #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px}
   #gone .cartouche{max-width:26rem;text-align:left;font-size:var(--fs-body)}
@@ -224,7 +230,7 @@
   <div id="adescedit" hidden>
     <label>Description et tenue<span class="hint">Vue par tous les bénévoles et reprise sur l'affiche. Pas de diagnostic médical.</span><textarea id="adesctext" rows="4" maxlength="1000" placeholder="Âge, taille, cheveux, vêtements, chaussures, ce qu'elle ou il porte"></textarea></label>
     <button id="adescsave" class="btn" type="button">Enregistrer la description</button>
-    <p class="msg" id="adescmsg" role="status"></p>
+    <p class="msg err" id="adescmsg" role="status"></p>
   </div>
   <p id="aphone"></p>
   <h3 class="dlabel">Consignes</h3>
@@ -237,8 +243,6 @@
   </ol>
   <button id="poster-img" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-send"/></svg>Partager l'affiche (image)</button>
   <button id="print" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-printer"/></svg>Imprimer l'affiche (PDF)</button>
-  <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
-  <p class="msg"><a href="#" id="abuselink">Signaler un abus</a> · <a href="/confidentialite" target="_blank" rel="noopener">Confidentialité</a></p>
 </dialog>
 
 <dialog id="dabuse">
@@ -247,7 +251,6 @@
   <label>Ce qui vous inquiète<span class="hint">Facultatif. N'indiquez pas votre nom.</span><textarea id="abusereason" rows="3"></textarea></label>
   <button id="abusesend" class="btn btn-primary" type="button">Envoyer le signalement</button>
   <p class="msg" id="abusemsg" role="status"></p>
-  <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
 </dialog>
 
 <section id="poster">
@@ -261,7 +264,7 @@
 
 <dialog id="dwelcome">
   <h2>Merci de nous aider</h2>
-  <label>Votre prénom<input id="wwho" autocomplete="given-name"></label>
+  <label>Votre prénom<input id="wwho" autocomplete="given-name" autofocus></label>
   <label>Prénom de votre binôme<span class="hint">Évitez de chercher seul.</span><input id="wpair"></label>
   <h3 class="dlabel">Les consignes</h3>
   <ol class="rules">
@@ -304,7 +307,6 @@
   </fieldset>
   <button id="close" class="btn btn-primary" type="button">Clôturer la recherche</button>
   <div class="msg" id="closemsg">La clôture supprime toutes les données, journal compris&nbsp;: exportez-le avant.</div>
-  <form method="dialog"><button class="btn btn-quiet">Fermer</button></form>
 </dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -408,6 +410,27 @@ map.on("zoomend",zoomClass); zoomClass();
 map.on("popupopen",function(){document.body.classList.add("popup-open");});
 map.on("popupclose",function(){document.body.classList.remove("popup-open");});
 
+// Fenêtres : une croix en haut à droite (Échap est natif) ; fiches de la carte : Échap aussi, où que soit le focus
+document.querySelectorAll("dialog").forEach(function(dlg){
+  dlg.insertAdjacentHTML("afterbegin",'<button class="dclose" type="button" aria-label="Fermer">'+icon("x")+'</button>');
+  dlg.querySelector(".dclose").onclick=function(){dlg.close();};
+  // À l'ouverture, le focus va au champ marqué autofocus, sinon à la fenêtre elle-même (pas à la croix)
+  var show=dlg.showModal.bind(dlg); dlg.tabIndex=-1;
+  dlg.showModal=function(){show();if(!dlg.querySelector("[autofocus]"))dlg.focus();};
+});
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!document.querySelector("dialog[open]"))map.closePopup();});
+// Bandeau du haut : confirmation (disparaît seule), erreur, ou retard d'un binôme (reste jusqu'à « Voir » ou la croix)
+var toastTimer=null, TOAST_ICONS={ok:"check",error:"alert",late:"clock"};
+function showToast(text,kind,action){
+  var box=document.getElementById("toast"); kind=kind||"ok"; clearTimeout(toastTimer);
+  box.className=kind==="ok"?"ok":""; box.setAttribute("role",kind==="ok"?"status":"alert");
+  box.innerHTML=icon(TOAST_ICONS[kind])+'<span></span>'+(action?'<button class="btn" type="button">Voir</button>':'')+'<button class="tclose" type="button" aria-label="Fermer">'+icon("x")+'</button>';
+  box.querySelector("span").textContent=text; box.hidden=false;
+  box.querySelector(".tclose").onclick=function(){box.hidden=true;};
+  if(action)box.querySelector(".btn").onclick=function(){box.hidden=true;action();};
+  else toastTimer=setTimeout(function(){box.hidden=true;},kind==="ok"?6000:8000);
+}
+
 function apiError(msg,kind){var e=new Error(msg);e.kind=kind;return e;}
 function post(path,body){
   return fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+TOKEN},body:JSON.stringify(body)})
@@ -476,7 +499,8 @@ function openCell(id,errMsg,errMsg2){
   function say(el,txt,isErr){el.textContent=txt;el.className=isErr?"msg err":"msg";}
   if(errMsg)say(m,errMsg,true);
   if(errMsg2)say(m2,errMsg2,true);
-  function saved(j){sectorStatus[id]=j.meta;paint();openCell(id);}
+  // Action faite : la fiche se ferme, le bandeau confirme
+  function saved(done){return function(j){sectorStatus[id]=j.meta;paint();map.closePopup();showToast(done);};}
   function failed(err){say(m,err.message,true);}
   var bStart=$("fstart"), bStop=$("fstop"), bPast=$("fpastsave");
   function firstName(){
@@ -489,19 +513,19 @@ function openCell(id,errMsg,errMsg2){
     var d=$("pd").value, f=$("pf").value;
     if(!d||!f){say(m,"Indiquez l'heure de début et de fin.",true);return;}
     say(m,"Enregistrement…");
-    post("/sector/done",{id:id,e:who,d:d,f:f,n:$("pn").value}).then(saved).catch(failed);
+    post("/sector/done",{id:id,e:who,d:d,f:f,n:$("pn").value}).then(saved("Carreau "+id+" enregistré comme fait. Merci !")).catch(failed);
   };
   if(bStart)bStart.onclick=function(){
     var who=firstName(); if(!who)return;
     say(m,"Enregistrement…");
     post("/sector/start",{id:id,e:who,o:DEVICE,p:+$("fp").value}).then(function(j){
-      var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved(j);
+      var mm=mine(); mm[id]=j.meta.ds; ls("rc_mine",JSON.stringify(mm)); saved("Bonne recherche sur "+id+". En rentrant, touchez le carreau pour le terminer.")(j);
     }).catch(failed);
   };
   if(bStop)bStop.onclick=function(){
     say(m,"Enregistrement…");
     post("/sector/stop",{id:id,o:DEVICE,n:$("fn").value}).then(function(j){
-      var mm=mine(); delete mm[id]; ls("rc_mine",JSON.stringify(mm)); saved(j);
+      var mm=mine(); delete mm[id]; ls("rc_mine",JSON.stringify(mm)); saved("Carreau "+id+" terminé. Merci !")(j);
     }).catch(failed);
   };
   if(ROLE!=="coord")return;
@@ -513,7 +537,7 @@ function openCell(id,errMsg,errMsg2){
   $("fsave").onclick=function(){
     say(m2,"Enregistrement…");
     post("/sector",{id:id,s:$("fs").value,e:$("fe2").value,n:$("fn2").value,d:$("fd").value,f:$("ff").value})
-      .then(saved).catch(function(err){say(m2,err.message,true);});
+      .then(saved("Carreau "+id+" corrigé.")).catch(function(err){say(m2,err.message,true);});
   };
 }
 function copy(text,el,done){
@@ -562,14 +586,15 @@ function drawPoints(points){
 }
 map.on("popupopen",function(e){
   var b=e.popup.getElement().querySelector("[data-del]");
-  if(b)b.onclick=function(){post("/point/delete",{id:b.getAttribute("data-del")}).then(function(){map.closePopup();load();}).catch(function(err){b.textContent=err.message;});};
+  if(b)b.onclick=function(){post("/point/delete",{id:b.getAttribute("data-del")}).then(function(){map.closePopup();showToast("Signalement retiré.");load();}).catch(function(err){b.textContent=err.message;});};
 });
 
 // Premier état reçu : on découvre la battue (rôle, point de départ, avis) et on construit la carte
 function setup(){
   document.title="Battue – "+(INFO.name||INFO.address);
   if(INFO.whatsapp){var wa=document.getElementById("wa");wa.href=INFO.whatsapp;wa.hidden=false;}
-  if(INFO.phone){var tel=document.getElementById("tel");tel.href="tel:"+INFO.phone.replace(/ /g,"");tel.hidden=false;}
+  // « Appeler » compose le numéro de la famille : inutile au coordinateur, qui l'a saisi
+  if(INFO.phone&&ROLE!=="coord"){var tel=document.getElementById("tel");tel.href="tel:"+INFO.phone.replace(/ /g,"");tel.hidden=false;}
   document.getElementById("aname").textContent=INFO.name?"Avez-vous vu "+INFO.name+" ?":"Avis de recherche";
   document.getElementById("asince").textContent=INFO.since?"Vu(e) pour la dernière fois "+fmtSince(INFO.since)+", "+INFO.address:"Dernier lieu connu : "+INFO.address;
   document.getElementById("adesc").textContent=INFO.description;
@@ -633,14 +658,17 @@ document.getElementById("home").onclick=function(){if(INFO)map.setView([INFO.lat
 document.getElementById("avis").onclick=function(){document.getElementById("davis").showModal();};
 
 // Signalement d'abus : seul le code de la battue et le motif partent, vers l'administrateur
-document.getElementById("abuselink").onclick=function(e){
-  e.preventDefault(); document.getElementById("davis").close(); document.getElementById("dabuse").showModal();
-};
+// Comme les mentions d'une carte : en bas à droite, toujours là sans encombrer l'avis
+map.attributionControl.addAttribution('<a href="/confidentialite" target="_blank" rel="noopener">Confidentialité</a> · <a href="#" class="abuselink">Signaler un abus</a>');
+document.getElementById("map").addEventListener("click",function(e){
+  if(!e.target.closest(".abuselink"))return;
+  e.preventDefault(); document.getElementById("dabuse").showModal();
+},true); // en capture : Leaflet arrête les clics sur ses contrôles
 document.getElementById("abusesend").onclick=function(){
   var btn=this, msg=document.getElementById("abusemsg");
   btn.disabled=true; msg.className="msg"; msg.textContent="Envoi…";
   fetch("/api/report",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:SEARCH_ID,reason:document.getElementById("abusereason").value.trim()})})
-    .then(function(r){if(!r.ok)throw new Error();msg.textContent="Merci, l'administrateur est prévenu.";})
+    .then(function(r){if(!r.ok)throw new Error();btn.disabled=false;msg.textContent="";document.getElementById("abusereason").value="";document.getElementById("dabuse").close();showToast("Merci, l'administrateur est prévenu.");})
     .catch(function(){btn.disabled=false;msg.className="msg err";msg.textContent="Échec de l'envoi. Écrivez à contact@battue.org avec le code "+SEARCH_ID+".";});
 };
 
@@ -682,7 +710,7 @@ document.getElementById("print").onclick=function(){
     document.getElementById("psince").textContent=document.getElementById("asince").textContent;
     document.getElementById("pdesc").textContent=INFO.description;
     document.getElementById("pcall").textContent=posterCall();
-    window.print();
+    window.print(); document.getElementById("davis").close();
   },function(){btn.textContent="Pas de connexion, réessayez";});
 };
 
@@ -734,7 +762,7 @@ document.getElementById("poster-img").onclick=function(){
   var btn=this, label=btn.lastChild;
   label.textContent="Préparation…";
   drawPoster().then(function(blob){
-    label.textContent="Partager l'affiche (image)";
+    label.textContent="Partager l'affiche (image)"; document.getElementById("davis").close();
     var file=new File([blob],"affiche-battue.png",{type:"image/png"});
     if(navigator.canShare&&navigator.canShare({files:[file]}))return navigator.share({files:[file],text:posterTitle()}).catch(function(){});
     var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
@@ -751,10 +779,7 @@ function lateAlerts(){
     if(!cells[id]||!late(s)||seen[key])return;
     seen[key]=1; ls("battue_late_"+SEARCH_ID,JSON.stringify(seen));
     var text=id+" : "+(s.e||"binôme")+", toujours pas de retour (prévu "+since(Date.now()-s.p*60000)+")";
-    var toast=document.getElementById("toast");
-    toast.innerHTML=icon("clock")+'<span></span><button class="btn" type="button">Voir</button>';
-    toast.querySelector("span").textContent=text; toast.hidden=false;
-    toast.querySelector("button").onclick=function(){toast.hidden=true;map.fitBounds(cells[id].b,{padding:[30,30]});openCell(id);};
+    showToast(text,"late",function(){map.fitBounds(cells[id].b,{padding:[30,30]});openCell(id);});
     if(navigator.vibrate)navigator.vibrate([300,150,300]);
     if(swReg&&window.Notification&&Notification.permission==="granted")swReg.showNotification("Battue · binôme en retard",{body:text,tag:"late-"+key,data:location.href});
   });
@@ -764,7 +789,6 @@ function lateAlerts(){
 function welcome(){
   var dlg=document.getElementById("dwelcome"), who=document.getElementById("wwho");
   who.value=ls("rc_who")||"";
-  dlg.oncancel=function(e){e.preventDefault();};
   document.getElementById("wgo").onclick=function(){
     var me=who.value.trim(), pair=document.getElementById("wpair").value.trim();
     if(!me){document.getElementById("wmsg").textContent="Indiquez votre prénom.";document.getElementById("wmsg").className="msg err";return;}
@@ -780,8 +804,8 @@ function setupCoordinator(){
   document.getElementById("adesc").hidden=true; document.getElementById("adescedit").hidden=false;
   descText.value=INFO.description||"";
   document.getElementById("adescsave").onclick=function(){
-    descMsg.textContent="Enregistrement…";
-    post("/info",{description:descText.value}).then(function(){descMsg.textContent="Enregistré : les bénévoles voient la nouvelle description.";load();})
+    descMsg.textContent="";
+    post("/info",{description:descText.value}).then(function(){document.getElementById("davis").close();showToast("Description enregistrée : les bénévoles la voient.");load();})
       .catch(function(err){descMsg.textContent=err.message;});
   };
   if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").then(function(r){swReg=r;}).catch(function(){});
@@ -811,6 +835,7 @@ function setupCoordinator(){
   document.getElementById("share").onclick=function(){
     // Sur téléphone, le partage natif joint la photo ; sinon on ouvre WhatsApp avec le texte seul
     var img=document.getElementById("aphoto");
+    dlg.close();
     var wa=function(){window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener");};
     if(!img.src||!navigator.canShare)return wa();
     fetch(img.src).then(function(r){return r.blob();}).then(function(blob){
@@ -855,7 +880,7 @@ map.on("locationfound",function(e){
   else{me.setLatLng(e.latlng);meAcc.setLatLng(e.latlng).setRadius(e.accuracy);}
   if(first){map.setView(e.latlng,17);first=false;}
 });
-map.on("locationerror",function(){alert("Position indisponible : autorisez la localisation pour ce site.");});
+map.on("locationerror",function(){showToast("Position indisponible : autorisez la localisation pour ce site.","error");});
 
 // Signalement à ma position (ou au centre de la carte)
 document.getElementById("sig").onclick=function(){openSignal();};
@@ -874,7 +899,7 @@ function openSignal(){
     var txt=root.querySelector("#stxt").value.trim(), who=root.querySelector("#swho").value.trim();
     if(!txt){msg.textContent="Décrivez ce que vous avez vu.";msg.className="msg err";return;}
     ls("rc_who",who); msg.textContent="Envoi…"; msg.className="msg";
-    post("/point",{lat:p.lat,lng:p.lng,txt:txt,who:who}).then(function(){map.closePopup();load();})
+    post("/point",{lat:p.lat,lng:p.lng,txt:txt,who:who}).then(function(){map.closePopup();showToast("Signalement envoyé : il apparaît sur la carte de tous.");load();})
       .catch(function(err){msg.textContent=err.message;msg.className="msg err";});
   };
 }

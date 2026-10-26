@@ -46,6 +46,8 @@ Documentation RGPD et audit : [`docs/`](docs).
 
 ## Déployer
 
+Chaque push sur `main` est testé puis déployé par GitHub Actions (`.github/workflows/deploy.yml`), avec les secrets de dépôt `CLOUDFLARE_API_TOKEN` (modèle « Edit Cloudflare Workers ») et `CLOUDFLARE_ACCOUNT_ID`. À la main :
+
 ```sh
 ./deploy.sh
 ```

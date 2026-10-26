@@ -98,6 +98,8 @@
   .pop label{font-size:var(--fs-small);margin:0 0 .6rem}
   .pop input,.pop select,.pop textarea{font-size:var(--fs-base);padding:.55rem .6rem}
   .pop textarea{min-height:64px}
+  .pop .who{margin:.2rem 0 .4rem}
+  .pop .who a{display:inline-block;padding:.5rem 0}
   .pop .row{display:flex;gap:.5rem}
   .pop .row label{flex:1}
   .pop button{width:100%;margin:.15rem 0}
@@ -279,7 +281,8 @@
 </dialog>
 
 <dialog id="dinvite">
-  <h2>Inviter les bénévoles</h2>
+  <h2>Coordination</h2>
+  <h3 class="dlabel">Inviter les bénévoles</h3>
   <button id="share" class="btn btn-wa btn-big" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chat"/></svg>Partager sur WhatsApp</button>
   <label style="margin-top:1rem">Lien des bénévoles<input id="volLink" readonly></label>
   <button id="cpVol" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-copy"/></svg>Copier le lien des bénévoles</button>
@@ -287,11 +290,13 @@
   <label>Votre lien de coordinateur<span class="hint">Gardez-le pour revenir ici. Ne le partagez pas.</span><input id="coordLink" readonly></label>
   <button id="cpCoord" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-lock"/></svg>Copier mon lien</button>
   <hr>
+  <h3 class="dlabel">Pendant la battue</h3>
   <button id="alerts" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-clock"/></svg>Alerte si un binôme est en retard</button>
   <p class="msg" id="alertsmsg">Une notification sur ce téléphone, tant que cette page reste ouverte.</p>
   <hr>
   <button id="journal" class="btn" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-download"/></svg>Exporter le journal (police)</button>
   <hr>
+  <h3 class="dlabel">Fin de la battue</h3>
   <fieldset class="outcome">
     <legend>La personne a-t-elle été retrouvée&nbsp;?</legend>
     <label class="check"><input type="radio" name="outcome" value="found"> Oui</label>
@@ -442,6 +447,15 @@ function post(path,body){
       return j;});},function(){throw new Error("Pas de connexion internet, réessayez.");});
 }
 
+// Prénom déjà connu sur cet appareil : affiché, le champ n'apparaît que sur « pas vous ? »
+function whoField(id,value,placeholder){
+  var input='<input id="'+id+'" placeholder="'+placeholder+'" value="'+esc(value)+'"'+(value?' hidden':'')+'>';
+  return (value?'<p class="who"><b>'+esc(value)+'</b> · <a href="#" data-who="'+id+'">pas vous&nbsp;?</a></p>':'')+input;
+}
+function wireWho(root){
+  var link=root.querySelector("[data-who]"); if(!link)return;
+  link.onclick=function(e){e.preventDefault();var input=root.querySelector("#"+link.getAttribute("data-who"));link.parentNode.hidden=true;input.hidden=false;input.focus();input.select();};
+}
 function statusLine(s){
   var k=s.s||"todo";
   function chip(cls,label){return '<span class="chip"><i class="sw '+cls+'"></i>'+label+'</span> ';}
@@ -469,7 +483,7 @@ function openCell(id,errMsg,errMsg2){
   }else if(k==="done"){
     html+='<div class="msg">Carreau terminé. Seul le coordinateur peut le rouvrir.</div>';
   }else{
-    html+='<input id="fe" placeholder="Vos prénoms, ex. Marc + Julie" value="'+esc(team())+'">'+
+    html+=whoField("fe",team(),"Vos prénoms, ex. Marc + Julie")+
       '<label>Durée prévue<select id="fp"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select></label>'+
       '<button id="fstart" class="btn btn-go btn-big" type="button">'+icon("play")+'Je pars sur ce carreau</button>'+
       '<details id="fpast"><summary>J\'ai déjà fouillé ce carreau</summary>'+
@@ -492,6 +506,7 @@ function openCell(id,errMsg,errMsg2){
   // on cherche les éléments dans la nouvelle fiche, jamais avec document.getElementById
   var root=popup.getElement();
   function $(x){return root.querySelector("#"+x);}
+  wireWho(root);
   var cp=$("cp");
   cp.onclick=function(e){e.preventDefault();copy(link,cp,"Lien copié");};
   // Messages affichés près du bouton utilisé
@@ -500,7 +515,7 @@ function openCell(id,errMsg,errMsg2){
   if(errMsg)say(m,errMsg,true);
   if(errMsg2)say(m2,errMsg2,true);
   // Action faite : la fiche se ferme, le bandeau confirme
-  function saved(done){return function(j){sectorStatus[id]=j.meta;paint();map.closePopup();showToast(done);};}
+  function saved(done){return function(j){sectorStatus[id]=j.meta;paint();map.closePopup();map.panTo(c);showToast(done);};}
   function failed(err){say(m,err.message,true);}
   var bStart=$("fstart"), bStop=$("fstop"), bPast=$("fpastsave");
   function firstName(){
@@ -576,17 +591,19 @@ function paint(){
   renderList(); renderClock();
   if(ROLE==="coord")lateAlerts();
 }
+function myPoints(){try{return JSON.parse(ls("rc_points")||"[]");}catch(e){return [];}}
 function drawPoints(points){
+  var mp=myPoints();
   pointsLayer.clearLayers();
   (points||[]).forEach(function(p){
     var m=L.circleMarker([p.lat,p.lng],{radius:11,color:"#fff",weight:3,fillColor:GRID_RED,fillOpacity:1}).addTo(pointsLayer);
     m.bindPopup('<div class="pop"><h3>'+icon("alert")+'Signalement '+hhmm(p.t)+'</h3>'+(p.who?'<div class="msg">par '+esc(p.who)+'</div>':'')+'<p>'+esc(p.txt)+'</p>'+
-      '<button class="btn btn-quiet" type="button" data-del="'+esc(p.id)+'">Retirer (traité)</button></div>');
+      (ROLE==="coord"||mp.indexOf(p.id)>=0?'<button class="btn btn-quiet" type="button" data-del="'+esc(p.id)+'">Retirer (traité)</button>':'')+'</div>');
   });
 }
 map.on("popupopen",function(e){
   var b=e.popup.getElement().querySelector("[data-del]");
-  if(b)b.onclick=function(){post("/point/delete",{id:b.getAttribute("data-del")}).then(function(){map.closePopup();showToast("Signalement retiré.");load();}).catch(function(err){b.textContent=err.message;});};
+  if(b)b.onclick=function(){post("/point/delete",{id:b.getAttribute("data-del"),o:DEVICE}).then(function(){map.closePopup();showToast("Signalement retiré.");load();}).catch(function(err){b.textContent=err.message;});};
 });
 
 // Premier état reçu : on découvre la battue (rôle, point de départ, avis) et on construit la carte
@@ -890,16 +907,17 @@ function openSignal(){
     '<p style="margin:.2rem 0 .3rem;font-weight:700">Vous voyez la personne, ou il y a un danger&nbsp;? Appelez d\'abord&nbsp;:</p>'+
     '<div class="sos"><a href="tel:17" aria-label="Appeler le 17">17</a><a href="tel:112" aria-label="Appeler le 112">112</a></div><div class="msg">'+(myPos?"À votre position.":"Au centre de la carte. Pour votre position exacte, touchez d\'abord « Moi ».")+'</div>'+
     '<textarea id="stxt" placeholder="Qu\'avez-vous vu ou appris ?"></textarea>'+
-    '<input id="swho" placeholder="Votre prénom" value="'+esc(ls("rc_who")||"")+'">'+
+    whoField("swho",ls("rc_who")||"","Votre prénom")+
     '<button id="ssend" class="btn btn-primary btn-big" type="button">Envoyer le signalement</button>'+
     '<div class="msg" id="smsg"></div></div>';
   var popup=L.popup({maxWidth:Math.min(300,window.innerWidth-40),autoPanPaddingTopLeft:[10,70]}).setLatLng(p).setContent(html).openOn(map);
-  var root=popup.getElement(), msg=root.querySelector("#smsg");
+  var root=popup.getElement(), msg=root.querySelector("#smsg"); wireWho(root);
   root.querySelector("#ssend").onclick=function(){
     var txt=root.querySelector("#stxt").value.trim(), who=root.querySelector("#swho").value.trim();
     if(!txt){msg.textContent="Décrivez ce que vous avez vu.";msg.className="msg err";return;}
     ls("rc_who",who); msg.textContent="Envoi…"; msg.className="msg";
-    post("/point",{lat:p.lat,lng:p.lng,txt:txt,who:who}).then(function(){map.closePopup();showToast("Signalement envoyé : il apparaît sur la carte de tous.");load();})
+    post("/point",{lat:p.lat,lng:p.lng,txt:txt,who:who,o:DEVICE}).then(function(j){
+      var mp=myPoints(); mp.push(j.id); ls("rc_points",JSON.stringify(mp));map.closePopup();showToast("Signalement envoyé : il apparaît sur la carte de tous.");load();})
       .catch(function(err){msg.textContent=err.message;msg.className="msg err";});
   };
 }

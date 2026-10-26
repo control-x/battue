@@ -62,7 +62,11 @@ check([first.status, second.status].sort().join() === "200,409", `carreau pris e
 
 // Signalement hors bornes refusé, signalement valide accepté
 check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 120, lng: 2.3, txt: "x" } })).status === 400, "signalement hors bornes refusé");
-check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 48.87, lng: 2.33, txt: "x" } })).status === 200, "signalement valide accepté");
+const point = await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 48.87, lng: 2.33, txt: "x", o: "appareil-auteur" } });
+check(point.status === 200, "signalement valide accepté");
+check((await api(`/api/r/${search.id}/state`, { token: search.vol })).body.points?.every((row) => !("o" in row)), "signalement : appareil de l'auteur jamais diffusé");
+check((await api(`/api/r/${search.id}/point/delete`, { method: "POST", token: search.vol, body: { id: point.body.id, o: "autre-appareil" } })).status === 403, "signalement : retrait refusé à un autre bénévole");
+check((await api(`/api/r/${search.id}/point/delete`, { method: "POST", token: search.vol, body: { id: point.body.id, o: "appareil-auteur" } })).status === 200, "signalement : retiré par son auteur");
 
 // Description : modifiable par le coordinateur seul, puis visible des bénévoles
 check((await api(`/api/r/${search.id}/info`, { method: "POST", token: search.vol, body: { description: "x" } })).status === 403, "description : refusée au bénévole");

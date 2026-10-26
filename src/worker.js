@@ -14,8 +14,8 @@
 // POST /sector/start {id,e,o,p} commence ; p : durée prévue en minutes ; o : jeton de l'appareil ; rouvrir un secteur fait : coordinateur
 // POST /sector/stop  {id,o,n}   termine ; seul l'appareil qui a commencé peut arrêter
 // POST /sector/done  {id,e,d,f,n} déclare un secteur déjà fait (heures saisies par le bénévole)
-// POST /point   {lat,lng,txt,who}
-// POST /point/delete {id}
+// POST /point   {lat,lng,txt,who,o}   o : jeton de l'appareil, jamais diffusé
+// POST /point/delete {id,o}  retrait : le coordinateur, ou l'appareil qui a signalé
 // POST /info  {description}   description et tenue, coordinateur seulement ; diffusée à tous et reprise sur l'affiche
 // POST /close {outcome?, foundByBattue?} clôture, coordinateur seulement : toutes les données sont supprimées ;
 //                outcome "found" / "not-found" et, si retrouvée, foundByBattue "yes" / "no" / "unknown"
@@ -244,7 +244,7 @@ export class Search extends DurableObject {
   publicState() {
     const secteurs = {};
     for (const [id, { o, ...pub }] of Object.entries(this.state.secteurs)) secteurs[id] = pub;
-    const points = Object.entries(this.state.points).map(([id, p]) => ({ id, ...p })).sort((a, b) => a.t - b.t);
+    const points = Object.entries(this.state.points).map(([id, { o, ...p }]) => ({ id, ...p })).sort((a, b) => a.t - b.t);
     return { info: this.meta.info, secteurs, points, now: Date.now() };
   }
 
@@ -421,7 +421,7 @@ export class Search extends DurableObject {
       const lat = +b.lat, lng = +b.lng;
       if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return json({ error: "pos" }, 400);
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), t: Date.now() };
+      const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), o: clip(b.o, 40), t: Date.now() };
       this.state.points[id] = point;
       this.stats().points++;
       await this.ctx.storage.put("meta", this.meta);
@@ -431,6 +431,7 @@ export class Search extends DurableObject {
     if (url.pathname === "/point/delete") {
       const point = this.state.points[clip(b.id, 40)];
       if (!point) return json({ ok: true });
+      if (!isAdmin && !(point.o && point.o === clip(b.o, 40))) return json({ error: "Seuls le coordinateur et l'auteur peuvent retirer ce signalement" }, 403);
       delete this.state.points[clip(b.id, 40)];
       await this.save("point-delete", `Signalement retiré (traité) : ${point.txt}`);
       return json({ ok: true });

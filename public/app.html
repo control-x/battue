@@ -221,6 +221,11 @@
   <img id="aphoto" alt="Photo de la personne recherchée" hidden>
   <p id="asince"></p>
   <p id="adesc" class="desc"></p>
+  <div id="adescedit" hidden>
+    <label>Description et tenue<span class="hint">Vue par tous les bénévoles et reprise sur l'affiche. Pas de diagnostic médical.</span><textarea id="adesctext" rows="4" maxlength="1000" placeholder="Âge, taille, cheveux, vêtements, chaussures, ce qu'elle ou il porte"></textarea></label>
+    <button id="adescsave" class="btn" type="button">Enregistrer la description</button>
+    <p class="msg" id="adescmsg" role="status"></p>
+  </div>
   <p id="aphone"></p>
   <h3 class="dlabel">Consignes</h3>
   <ol class="rules">
@@ -580,6 +585,7 @@ function setup(){
 }
 function applyState(j){
   if(!INFO){ROLE=j.role;INFO=j.info;VOL=j.vol;setup();}
+  else if(j.info){INFO=j.info;document.getElementById("adesc").textContent=INFO.description;}
   sectorStatus=j.secteurs||{}; drawPoints(j.points); paint();
 }
 function load(){
@@ -770,6 +776,14 @@ function welcome(){
 
 // Coordinateur : liens, partage WhatsApp, clôture
 function setupCoordinator(){
+  var descText=document.getElementById("adesctext"), descMsg=document.getElementById("adescmsg");
+  document.getElementById("adesc").hidden=true; document.getElementById("adescedit").hidden=false;
+  descText.value=INFO.description||"";
+  document.getElementById("adescsave").onclick=function(){
+    descMsg.textContent="Enregistrement…";
+    post("/info",{description:descText.value}).then(function(){descMsg.textContent="Enregistré : les bénévoles voient la nouvelle description.";load();})
+      .catch(function(err){descMsg.textContent=err.message;});
+  };
   if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js").then(function(r){swReg=r;}).catch(function(){});
   var alertsMsg=document.getElementById("alertsmsg"), alertsBtn=document.getElementById("alerts");
   if(!window.Notification){alertsBtn.hidden=true;alertsMsg.textContent="Ce navigateur ne permet pas les notifications : les retards s'affichent sur la carte.";}

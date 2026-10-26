@@ -64,6 +64,11 @@ check([first.status, second.status].sort().join() === "200,409", `carreau pris e
 check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 120, lng: 2.3, txt: "x" } })).status === 400, "signalement hors bornes refusé");
 check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 48.87, lng: 2.33, txt: "x" } })).status === 200, "signalement valide accepté");
 
+// Description : modifiable par le coordinateur seul, puis visible des bénévoles
+check((await api(`/api/r/${search.id}/info`, { method: "POST", token: search.vol, body: { description: "x" } })).status === 403, "description : refusée au bénévole");
+check((await api(`/api/r/${search.id}/info`, { method: "POST", token: search.coord, body: { description: "Manteau rouge" } })).status === 200, "description : modifiée par le coordinateur");
+check((await api(`/api/r/${search.id}/state`, { token: search.vol })).body.info?.description === "Manteau rouge", "description : visible des bénévoles");
+
 // Abus : battue inexistante refusée, motif visible dans l'admin, débit limité
 check((await api("/api/report", { method: "POST", body: { id: "zzzzzz", reason: "x" } })).status === 404, "abus : battue inexistante refusée");
 check((await api("/api/report", { method: "POST", body: { id: search.id, reason: "Motif de test" } })).status === 200, "abus : signalement accepté");

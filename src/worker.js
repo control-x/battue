@@ -16,6 +16,7 @@
 // POST /sector/done  {id,e,d,f,n} déclare un secteur déjà fait (heures saisies par le bénévole)
 // POST /point   {lat,lng,txt,who}
 // POST /point/delete {id}
+// POST /info  {description}   description et tenue, coordinateur seulement ; diffusée à tous et reprise sur l'affiche
 // POST /close {outcome?, foundByBattue?} clôture, coordinateur seulement : toutes les données sont supprimées ;
 //                outcome "found" / "not-found" et, si retrouvée, foundByBattue "yes" / "no" / "unknown"
 //                (facultatifs) rejoignent l'historique anonyme
@@ -363,6 +364,13 @@ export class Search extends DurableObject {
       const outcome = ["found", "not-found"].includes(b.outcome) ? b.outcome : null;
       const foundByBattue = outcome === "found" && ["yes", "no", "unknown"].includes(b.foundByBattue) ? b.foundByBattue : null;
       await this.wipe("close", { outcome, foundByBattue });
+      return json({ ok: true });
+    }
+    if (url.pathname === "/info") {
+      if (!isAdmin) return json({ error: "admin" }, 403);
+      this.meta.info.description = clip(b.description, 1000).trim();
+      await this.ctx.storage.put("meta", this.meta);
+      await this.save("info", "Description modifiée par le coordinateur : " + this.meta.info.description);
       return json({ ok: true });
     }
     if (url.pathname === "/sector/start" || url.pathname === "/sector/stop") {

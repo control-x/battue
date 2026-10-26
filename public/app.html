@@ -92,8 +92,10 @@
   .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .pop h3 .prio{font-size:var(--fs-caption);letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
   .pop .state{margin:.2rem 0 .5rem}
-  .pop .links{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0 .75rem;padding:.6rem 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
-  .pop .links a{display:inline-flex;align-items:center;gap:.4rem;font-weight:700}
+  /* Bas de fiche : outils secondaires, sur une ligne */
+  .pop .more{margin-top:.75rem;padding-top:.5rem;border-top:1px solid var(--hairline)}
+  .pop .links{display:flex;flex-wrap:wrap;gap:0 1rem;font-size:var(--fs-small)}
+  .pop .links a{display:inline-flex;align-items:center;gap:.3rem;font-weight:700;padding:.5rem 0}
   .pop .links .i{width:18px;height:18px;color:var(--grid)}
   .pop label{font-size:var(--fs-small);margin:0 0 .6rem}
   .pop input,.pop select,.pop textarea{font-size:var(--fs-base);padding:.55rem .6rem}
@@ -459,7 +461,7 @@ function wireWho(root){
 function statusLine(s){
   var k=s.s||"todo";
   function chip(cls,label){return '<span class="chip"><i class="sw '+cls+'"></i>'+label+'</span> ';}
-  if(k==="doing")return (late(s)?chip("late","En retard"):chip("doing","En cours"))+(s.e?esc(s.e):'')+(s.d?', depuis '+hm(s.d):'')+(s.ds?' ('+since(s.ds)+(s.p?' sur '+since(Date.now()-s.p*60000)+' prévues':'')+')':'');
+  if(k==="doing")return (late(s)?chip("late","En retard"):chip("doing","En cours"))+(s.e?esc(s.e):'')+(s.d?', depuis '+hm(s.d):'')+(s.ds&&s.p?', retour prévu à '+hhmm(s.ds+s.p*60000):'');
   if(k==="done")return chip("done","Fait")+(s.e?esc(s.e):'')+(s.d||s.f?', '+hm(s.d||'?')+' – '+hm(s.f||'?'):'');
   if(k==="alert")return chip("alert","À revoir")+(s.e?esc(s.e):'');
   return chip("","À faire");
@@ -469,12 +471,9 @@ function openCell(id,errMsg,errMsg2){
   var gm="https://www.google.com/maps/dir/?api=1&destination="+c.lat.toFixed(5)+","+c.lng.toFixed(5)+"&travelmode=walking";
   var link=volLink().replace("#","?s="+id+"#");
   var waText="Secteur "+id+(INFO.name?" pour retrouver "+INFO.name:"")+" : "+link;
+  // En haut : l'état et l'action principale ; en bas, les outils secondaires
   var html='<div class="pop"><h3>Carreau '+id+(cells[id].prio?' <span class="prio">Prioritaire</span>':'')+'</h3><div class="state">'+statusLine(s)+'</div>'+
-    (s.n?'<div>'+esc(s.n)+'</div>':'')+
-    '<div class="links"><a href="'+gm+'" target="_blank" rel="noopener">'+icon("route")+'Itinéraire à pied</a>'+
-    '<a href="https://wa.me/?text='+encodeURIComponent(waText)+'" target="_blank" rel="noopener">'+icon("send")+'Envoyer ce carreau sur WhatsApp</a>'+
-    '<a href="#" id="cp">'+icon("copy")+'Copier le lien</a></div>'+
-    '<div class="sos">Urgence <a href="tel:17" aria-label="Appeler le 17">17</a><a href="tel:112" aria-label="Appeler le 112">112</a></div>';
+    (s.n?'<div>'+esc(s.n)+'</div>':'');
   if(k==="doing"&&isMine(id)){
     html+='<textarea id="fn" placeholder="Note : affiches posées, ce qui a été vu…">'+esc(s.n)+'</textarea>'+
       '<button id="fstop" class="btn btn-done btn-big" type="button">'+icon("check")+'J\'ai terminé ce carreau</button>';
@@ -485,14 +484,20 @@ function openCell(id,errMsg,errMsg2){
   }else{
     html+=whoField("fe",team(),"Vos prénoms, ex. Marc + Julie")+
       '<label>Durée prévue<select id="fp"><option value="30">30 min</option><option value="60" selected>1 h</option><option value="90">1 h 30</option><option value="120">2 h</option></select></label>'+
-      '<button id="fstart" class="btn btn-go btn-big" type="button">'+icon("play")+'Je pars sur ce carreau</button>'+
-      '<details id="fpast"><summary>J\'ai déjà fouillé ce carreau</summary>'+
+      '<button id="fstart" class="btn btn-go btn-big" type="button">'+icon("play")+'Je pars sur ce carreau</button>';
+  }
+  html+='<div class="msg" id="fmsg"></div><div class="more">'+
+    '<div class="links"><a href="'+gm+'" target="_blank" rel="noopener">'+icon("route")+'Itinéraire</a>'+
+    '<a href="https://wa.me/?text='+encodeURIComponent(waText)+'" target="_blank" rel="noopener">'+icon("send")+'WhatsApp</a>'+
+    '<a href="#" id="cp">'+icon("copy")+'Copier</a></div>'+
+    '<div class="sos">Urgence <a href="tel:17" aria-label="Appeler le 17">17</a><a href="tel:112" aria-label="Appeler le 112">112</a></div>';
+  if(k==="todo"||k==="alert"){
+    html+='<details id="fpast"><summary>J\'ai déjà fouillé ce carreau</summary>'+
       '<div class="row"><label>Début<input id="pd" type="time"></label>'+
       '<label>Fin<input id="pf" type="time" value="'+nowHHMM()+'"></label></div>'+
       '<textarea id="pn" placeholder="Note : affiches posées, ce qui a été vu…"></textarea>'+
       '<button id="fpastsave" class="btn btn-done" type="button">'+icon("check")+'Enregistrer comme fait</button></details>';
   }
-  html+='<div class="msg" id="fmsg"></div>';
   if(ROLE==="coord")
     html+='<details'+(errMsg2?' open':'')+'><summary>Correction (coordinateur)</summary><select id="fs">'+Object.keys(LABELS).map(function(x){return '<option value="'+x+'"'+(x===k?" selected":"")+'>'+LABELS[x]+'</option>';}).join("")+'</select>'+
       '<input id="fe2" placeholder="Prénom" value="'+esc(s.e)+'">'+
@@ -500,7 +505,7 @@ function openCell(id,errMsg,errMsg2){
       '<label>Fin<input id="ff" type="time" value="'+esc(s.f)+'"></label></div>'+
       '<textarea id="fn2" placeholder="Note">'+esc(s.n)+'</textarea>'+
       '<button id="fsave" class="btn" type="button">Enregistrer la correction</button><div class="msg" id="fmsg2"></div></details>';
-  html+='</div>';
+  html+='</div></div>';
   var popup=L.popup({maxWidth:Math.min(300,window.innerWidth-40),autoPanPaddingTopLeft:[10,70]}).setLatLng(c).setContent(html).openOn(map);
   // L'ancienne fiche reste dans la page pendant son animation de fermeture :
   // on cherche les éléments dans la nouvelle fiche, jamais avec document.getElementById

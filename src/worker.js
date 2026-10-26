@@ -492,6 +492,8 @@ async function createSearch(req, env) {
 
 async function handle(req, env) {
   const url = new URL(req.url);
+  // CF-Visitor : le protocole vu par Cloudflare (absent en local, où wrangler dev réécrit l'URL en http://battue.org)
+  if (visitorScheme(req) === "http") return Response.redirect("https://" + url.host + url.pathname + url.search, 301);
   if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
   if (url.pathname === "/api/report" && req.method === "POST") return reportAbuse(req, env);
@@ -660,8 +662,19 @@ async function notify(env, message) {
   if (env.NTFY_TOPIC) await fetch("https://ntfy.sh/" + env.NTFY_TOPIC, { method: "POST", body: message });
 }
 
+const visitorScheme = (req) => { try { return JSON.parse(req.headers.get("CF-Visitor")).scheme; } catch { return null; } };
+
+// HTTPS seulement (HSTS), en production ; pas en local ni sur l'aperçu
+async function serve(req, env) {
+  const res = await handle(req, env);
+  if (res.status === 101 || visitorScheme(req) !== "https") return res;
+  const secured = new Response(res.body, res);
+  secured.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  return secured;
+}
+
 export default {
-  fetch: handle,
+  fetch: serve,
   async scheduled(event, env, ctx) {
     ctx.waitUntil(selfTest(env).then(() => stat(env, "selftest-ok"), (err) => {
       console.error("selftest", err);

@@ -12,14 +12,14 @@
 <link rel="stylesheet" href="/style.css">
 <style>
   html,body{height:100%;overflow:hidden}
-  body{font-size:1rem}
+  body{font-size:var(--fs-base)}
 
   /* Bandeau d'outils : le haut du plan */
   .appbar{position:absolute;z-index:1001;left:0;right:0;top:0;padding:calc(6px + env(safe-area-inset-top,0px)) 8px 6px;display:flex;align-items:center;gap:8px;background:var(--sheet);border-bottom:2px solid var(--ink)}
-  .appbar .brand{font-size:1.35rem}
+  .appbar .brand{font-size:var(--fs-title)}
   .appbar .brand .bname{display:none}
   .tools{display:flex;gap:4px;margin-left:auto}
-  .tool{flex-direction:column;gap:2px;min-width:52px;min-height:52px;padding:4px 6px;border:2px solid transparent;font-size:.72rem;letter-spacing:.02em;background:transparent}
+  .tool{flex-direction:column;gap:2px;min-width:52px;min-height:52px;padding:4px 6px;border:2px solid transparent;font-size:var(--fs-caption);letter-spacing:.02em;background:transparent}
   .tool .i{width:24px;height:24px}
   .tool:hover{background:var(--paper);border-color:var(--ink)}
   .tool-primary{background:var(--grid);color:#fff;border-color:var(--grid)}
@@ -31,7 +31,7 @@
   .leaflet-tile-pane{filter:saturate(.55) contrast(1.04)}
 
   /* Index de marge vivant : lettres et numéros des carreaux visibles, collés aux bords */
-  .mcols,.mrows{position:absolute;z-index:500;pointer-events:none;background:rgba(255,255,255,.88);color:var(--grid);font:800 .85rem/1 Archivo,system-ui,sans-serif;font-stretch:80%}
+  .mcols,.mrows{position:absolute;z-index:500;pointer-events:none;background:rgba(255,255,255,.88);color:var(--grid);font:800 var(--fs-caption)/1 Archivo,system-ui,sans-serif;font-stretch:80%}
   .mcols{left:0;right:0;top:0;height:22px;border-bottom:1px solid var(--grid-soft)}
   .mrows{left:0;top:22px;bottom:0;width:24px;border-right:1px solid var(--grid-soft)}
   .mcols span,.mrows span{position:absolute;transform:translate(-50%,-50%)}
@@ -46,12 +46,12 @@
   /* Bas d'écran : Signaler au pouce, au-dessus du cartouche de légende */
   .dock{position:absolute;z-index:1000;left:32px;right:10px;bottom:calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
   .dock>*{pointer-events:auto}
-  #sig{min-height:56px;padding:.6em 1.1em;font-size:1.1rem;box-shadow:var(--shadow)}
+  #sig{min-height:56px;padding:.6em 1.1em;font-size:var(--fs-body);box-shadow:var(--shadow)}
 
   /* Cartouche de légende */
-  .legend{align-self:stretch;max-width:24rem;padding:.55rem .75rem;font-size:.95rem;line-height:1.3}
+  .legend{align-self:stretch;max-width:24rem;padding:.55rem .75rem;font-size:var(--fs-small);line-height:1.3}
   .legend .row{display:flex;flex-wrap:wrap;gap:.2rem .9rem}
-  #clock{display:flex;flex-wrap:wrap;gap:0 .8rem;font-weight:700;font-stretch:82%;font-size:.9rem}
+  #clock{display:flex;flex-wrap:wrap;gap:0 .8rem;font-weight:700;font-stretch:82%;font-size:var(--fs-small)}
   #clock span{display:inline-flex;align-items:center;gap:.3rem}
   #clock .i{width:16px;height:16px;color:var(--grid)}
   #info{font-weight:700;margin-top:.25rem}
@@ -62,14 +62,14 @@
   #sum .late{color:var(--grid)}
   #list{max-height:34vh;overflow:auto;margin:.4rem 0;border-top:2px solid var(--ink)}
   #list div{padding:.45rem 0;border-bottom:1px solid var(--hairline);cursor:pointer}
-  .keys{display:flex;flex-wrap:wrap;gap:.15rem .7rem;margin-top:.4rem;padding-top:.4rem;border-top:1px solid var(--hairline);font-size:.82rem;font-weight:700;font-stretch:88%}
+  .keys{display:flex;flex-wrap:wrap;gap:.15rem .7rem;margin-top:.4rem;padding-top:.4rem;border-top:1px solid var(--hairline);font-size:var(--fs-caption);font-weight:700;font-stretch:88%}
   .keys span{display:inline-flex;align-items:center;gap:.3rem}
-  .sos{display:flex;align-items:center;gap:.4rem;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.85rem;margin-bottom:.3rem}
+  .sos{display:flex;align-items:center;gap:.4rem;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:var(--fs-caption);margin-bottom:.3rem}
   .sos #maj{margin:0 0 0 auto;text-transform:none;letter-spacing:0;font-weight:600}
-  .sos a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:36px;padding:0 .5rem;border:2px solid var(--grid);border-radius:999px;color:var(--grid);font-size:1.05rem;text-decoration:none;font-variant-numeric:tabular-nums}
+  .sos a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:36px;padding:0 .5rem;border:2px solid var(--grid);border-radius:999px;color:var(--grid);font-size:var(--fs-label);text-decoration:none;font-variant-numeric:tabular-nums}
   .sos a:hover{background:var(--grid);color:#fff}
   .popup-open .dock{display:none}
-  #maj{color:var(--ink-2);font-size:.85rem;display:flex;align-items:center;gap:.35rem}
+  #maj{color:var(--ink-2);font-size:var(--fs-caption);display:flex;align-items:center;gap:.35rem}
   #maj.live::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--park-ink);box-shadow:0 0 0 3px rgba(44,122,58,.2)}
 
   /* Pastilles d'état : motif + mot, jamais la couleur seule */
@@ -81,22 +81,22 @@
   .sw.late{border:2px dashed var(--grid)}
   .place{display:block;width:16px;height:16px;margin:3px;background:var(--ink);border:2.5px solid #fff;box-shadow:0 0 0 1.5px var(--ink),0 2px 6px rgba(0,0,0,.35);transform:rotate(45deg)}
   .place.small{display:inline-block;width:10px;height:10px;margin:0 3px;border-width:1.5px;box-shadow:0 0 0 1px var(--ink)}
-  .chip{display:inline-flex;align-items:center;gap:.35rem;font-weight:800;font-stretch:85%;text-transform:uppercase;font-size:.85rem;letter-spacing:.02em}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;font-weight:800;font-stretch:85%;text-transform:uppercase;font-size:var(--fs-caption);letter-spacing:.02em}
 
   /* Fiches (popups Leaflet) en cartouche */
   .leaflet-popup-content-wrapper{border-radius:3px;border:2px solid var(--ink);box-shadow:var(--shadow);padding:0}
   .leaflet-popup-tip{border:2px solid var(--ink);box-shadow:none}
-  .leaflet-popup-content{margin:14px 16px;font:400 1rem/1.4 Archivo,system-ui,sans-serif;min-width:230px}
+  .leaflet-popup-content{margin:14px 16px;font:400 var(--fs-base)/1.4 Archivo,system-ui,sans-serif;min-width:230px}
   .leaflet-container a.leaflet-popup-close-button{width:32px;height:32px;color:transparent;overflow:hidden}
   .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:8px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
-  .pop h3{font:800 1.5rem/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
-  .pop h3 .prio{font-size:.8rem;letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
+  .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .pop h3 .prio{font-size:var(--fs-caption);letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
   .pop .state{margin:.2rem 0 .5rem}
   .pop .links{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0 .75rem;padding:.6rem 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
   .pop .links a{display:inline-flex;align-items:center;gap:.4rem;font-weight:700}
   .pop .links .i{width:18px;height:18px;color:var(--grid)}
-  .pop label{font-size:.95rem;margin:0 0 .6rem}
-  .pop input,.pop select,.pop textarea{font-size:1rem;padding:.55rem .6rem}
+  .pop label{font-size:var(--fs-small);margin:0 0 .6rem}
+  .pop input,.pop select,.pop textarea{font-size:var(--fs-base);padding:.55rem .6rem}
   .pop textarea{min-height:64px}
   .pop .row{display:flex;gap:.5rem}
   .pop .row label{flex:1}
@@ -106,17 +106,17 @@
   .btn-done{background:var(--park-ink);border-color:var(--park-ink);color:#fff}
   .btn-done:hover{background:var(--park-deep)}
   .btn-quiet{background:var(--paper)}
-  .pop details{margin-top:.6rem;font-size:.95rem}
+  .pop details{margin-top:.6rem;font-size:var(--fs-small)}
   .pop summary{cursor:pointer;font-weight:700;padding:.65rem 0}
   .pop summary::marker{color:var(--grid)}
   .pop .msg:empty,.legend .msg:empty{min-height:0;margin:0}
   #fpast summary{color:var(--park-ink)}
-  .pop .msg{font-size:.95rem}
+  .pop .msg{font-size:var(--fs-small)}
 
   /* Fenêtres */
   dialog{border:2px solid var(--ink);border-radius:3px;box-shadow:0 10px 40px rgba(20,20,20,.35);width:min(28rem,calc(100vw - 24px));max-height:88vh;overflow:auto;padding:1.25rem;color:var(--ink)}
   dialog::backdrop{background:rgba(20,20,20,.45)}
-  dialog h2{font-size:1.7rem;margin-bottom:.75rem}
+  dialog h2{font-size:var(--fs-heading);margin-bottom:.75rem}
   dialog img{display:block;border:2px solid var(--ink);margin:0 0 .75rem}
   dialog p{margin:.4rem 0}
   dialog .desc{white-space:pre-wrap}
@@ -127,9 +127,9 @@
   .rules li{margin:.4rem 0;padding-left:.2rem}
   .rules li::marker{color:var(--grid);font-weight:800}
   .outcome{border:0;margin:0 0 .75rem;padding:0}
-  .outcome legend{font:800 1.05rem/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin-bottom:.5rem;padding:0}
+  .outcome legend{font:800 var(--fs-label)/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin-bottom:.5rem;padding:0}
   .outcome label.check{display:inline-flex;margin:0 1.5rem .4rem 0;align-items:center}
-  .dlabel{font:800 1.05rem/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin:1rem 0 .25rem}
+  .dlabel{font:800 var(--fs-label)/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin:1rem 0 .25rem}
 
   #toast{position:absolute;z-index:1002;left:10px;right:10px;top:calc(76px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--sheet);border:3px dashed var(--grid);box-shadow:var(--shadow);font-weight:700}
   #toast[hidden]{display:none}
@@ -138,7 +138,7 @@
   #toast button{min-height:44px;padding:.4em .8em}
   #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px}
-  #gone .cartouche{max-width:26rem;text-align:left;font-size:1.15rem}
+  #gone .cartouche{max-width:26rem;text-align:left;font-size:var(--fs-body)}
   #gone .brand{margin-bottom:1rem}
 
   .leaflet-control-zoom{border:2px solid var(--ink)!important;border-radius:3px!important;box-shadow:var(--shadow)!important}
@@ -165,7 +165,7 @@
   @media (min-width:640px){
     .appbar{padding-left:14px;padding-right:14px}
     .appbar .brand .bname{display:inline}
-    .tool{flex-direction:row;font-size:.9rem;padding:6px 10px;gap:6px}
+    .tool{flex-direction:row;font-size:var(--fs-small);padding:6px 10px;gap:6px}
     .tool .i{width:20px;height:20px}
   }
 </style>

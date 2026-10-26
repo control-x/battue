@@ -403,7 +403,7 @@
       "refersTo": "emergency-number",
       "description": "17 et 112 cerclés, appelables, sur chaque écran.",
       "html": "<p class=\"ds-urg\">Appelez le <a href=\"tel:17\">17</a> ou le <a href=\"tel:112\">112</a></p>",
-      "css": ".ds-urg{display:flex;align-items:center;gap:.4rem;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.125rem;color:#141414}.ds-urg a{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 .7rem;border:2px solid #c8102e;border-radius:999px;color:#c8102e;font-weight:800;font-size:1.3rem;text-decoration:none;font-variant-numeric:tabular-nums}.ds-urg a:hover{background:#c8102e;color:#fff}.ds-urg a:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}"
+      "css": ".ds-urg{display:flex;align-items:center;gap:.4rem;font-family:Archivo,system-ui,sans-serif;font-weight:700;font-size:1.125rem;color:#141414}.ds-urg a{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:44px;padding:0 .7rem;border:2px solid #c8102e;border-radius:999px;color:#c8102e;font-weight:800;font-size:1.35rem;text-decoration:none;font-variant-numeric:tabular-nums}.ds-urg a:hover{background:#c8102e;color:#fff}.ds-urg a:focus-visible{outline:3px solid #1f5fbf;outline-offset:2px}"
     },
     {
       "name": "Légende des statuts",

@@ -36,6 +36,12 @@ typography:
     fontWeight: 800
     lineHeight: 1.05
     fontVariation: "'wdth' 70"
+  heading:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 800
+    lineHeight: 1
+    fontVariation: "'wdth' 70"
   title:
     fontFamily: "Archivo, system-ui, sans-serif"
     fontSize: "1.35rem"
@@ -53,6 +59,22 @@ typography:
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: "0.03em"
+    fontVariation: "'wdth' 80"
+  base:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.4
+  small:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "0.9rem"
+    fontWeight: 400
+    lineHeight: 1.3
+  caption:
+    fontFamily: "Archivo, system-ui, sans-serif"
+    fontSize: "0.85rem"
+    fontWeight: 700
+    lineHeight: 1.25
     fontVariation: "'wdth' 80"
   margin-index:
     fontFamily: "Archivo, system-ui, sans-serif"
@@ -183,13 +205,19 @@ Les couleurs de la carte (carroyage, encre, repère, aplat « en cours », hachu
 
 **Character :** Une seule famille, la grotesque de cartographe : condensée en capitales pour nommer comme un plan nomme, pleine largeur pour expliquer comme une notice.
 
+Chaque taille est une variable `--fs-*` de `style.css` (headline, heading, title, body, label, base, small, caption) ; `h1` et `h2` gardent leur valeur écrite pour rester lisibles par le détecteur.
+
 ### Hierarchy
 - **Display** (800, clamp 2.5–4.5rem, 0.95, largeur 66 %, capitales) : la question du cartouche d'accueil, le titre de la création.
-- **Headline** (800, 1.9rem, 1.05, largeur 70 %, capitales) : titres de sections ; 1.7rem dans les fenêtres, 1.5rem en titre de fiche de carreau.
-- **Title** (800, 1.35rem, 1.1, largeur 70 %, capitales) : légendes de groupes de champs, filet noir dessous ; 1.05rem / 72 % pour les sous-titres de fenêtre.
-- **Body** (400, 1.125rem, 1.5) : texte courant, champs ; mesure 62ch. La carte descend à 1rem.
+- **Headline** (800, 1.9rem, 1.05, largeur 70 %, capitales) : titres de sections, chiffres clés de l'admin.
+- **Heading** (800, 1.5rem, 1, largeur 70 %, capitales) : titres des fenêtres et des fiches de carreau, marque.
+- **Title** (800, 1.35rem, 1.1, largeur 70 %, capitales) : légendes de groupes de champs, filet noir dessous ; gros bouton, numéros d'urgence, marque de la barre de carte. Les sous-titres de fenêtre prennent la taille Label (72 %).
+- **Body** (400, 1.125rem, 1.5) : texte courant, champs, chapeau ; mesure 62ch.
+- **Base** (400, 1rem) : corps de la carte et de ses fiches, indications sous les champs, messages.
+- **Small** (0.9rem) : légende et horloge de la carte, libellés des fiches, petits boutons, notes de l'admin.
+- **Caption** (700, 0.85rem, largeur 80 %) : puces d'état, en-têtes de tableau, libellés des outils de barre, étiquettes du plan. Rien en dessous, sauf les noms de carreaux dessinés sur la carte (px) et l'affiche imprimée (pt).
 - **Label** (700, 1.05rem, +0.03em, largeur 80 %, capitales) : boutons, liens d'outils, références d'index.
-- **Margin index** (700–800, 0.85–0.9rem, largeur 80 %, rouge plan) : lettres et numéros de marge, sur accueil et carte.
+- **Margin index** (700–800, Caption à Small, largeur 80 %, rouge plan) : lettres et numéros de marge, sur accueil et carte.
 
 ### Named Rules
 **La règle de la voix du plan.** Ce qui nomme (titres, boutons, secteurs, marge) est en capitales condensées 66–85 % ; ce qui explique reste en bas de casse pleine largeur. Jamais de capitales condensées pour une phrase.
@@ -227,7 +255,7 @@ Des étiquettes de plan : capitales condensées dans un filet noir.
 - **Primary :** rouge plan plein, texte blanc ; un seul par écran.
 - **Défaut :** feuille blanche, filet encre ; survol gris papier (`#efefea`) ; appui : descente de 1 px (0.15s ease-out).
 - **Variantes de fiche :** encre pleine (« J'y vais »), vert parc encre (« Terminé »), papier (discret) ; vert WhatsApp pour le partage.
-- **Outils de barre :** icône 24 px au-dessus d'un libellé de 0.72rem, 52 × 52 px, filet transparent qui apparaît au survol ; icône à gauche dès 640 px.
+- **Outils de barre :** icône 24 px au-dessus d'un libellé Caption (0.85rem), 52 × 52 px, filet transparent qui apparaît au survol ; icône à gauche dès 640 px.
 
 ### Inputs / Fields
 - **Style :** feuille blanche, filet encre 2 px, 3 px de coin, corps 1.125rem ; libellé gras au-dessus, indication en encre seconde.

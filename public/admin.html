@@ -11,13 +11,13 @@
   .admin{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 4rem}
   .admin section+section{margin-top:3rem}
   .admin h2{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap}
-  .admin h2 small{font:600 1rem Archivo,system-ui,sans-serif;text-transform:none;color:var(--ink-2)}
+  .admin h2 small{font:600 var(--fs-base) Archivo,system-ui,sans-serif;text-transform:none;color:var(--ink-2)}
   .scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
   th,td{padding:.6rem .5rem;border-bottom:1px solid var(--hairline);text-align:right;vertical-align:middle;white-space:nowrap}
   th:first-child,td:first-child{text-align:left}
-  thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:.85rem;border-bottom:2px solid var(--ink)}
-  td.code{font-weight:800;font-stretch:85%;letter-spacing:.04em;font-size:1.1rem}
+  thead th{white-space:nowrap;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:var(--fs-caption);border-bottom:2px solid var(--ink)}
+  td.code{font-weight:800;font-stretch:85%;letter-spacing:.04em;font-size:var(--fs-body)}
   td.warn{color:var(--grid);font-weight:800}
   td.calm{color:var(--ink-2)}
   tr.abuse td{white-space:normal;text-align:left;color:var(--grid);border-bottom:2px solid var(--grid)}
@@ -31,7 +31,7 @@
   .steps{display:inline-flex;gap:3px}
   .steps i{width:14px;height:14px;border:1px solid var(--grid);background:var(--sheet)}
   .steps i.on{background:repeating-linear-gradient(45deg,var(--park-ink) 0 2px,var(--sheet) 2px 5px)}
-  td .btn{min-height:40px;padding:.35em .8em;font-size:.9rem}
+  td .btn{min-height:40px;padding:.35em .8em;font-size:var(--fs-small)}
   .status{display:flex;gap:.6rem;align-items:center;font-weight:700;margin:0 0 1.5rem}
   .status i{width:14px;height:14px;border-radius:50%;background:var(--park-ink);flex:none}
   .status.ko i{background:var(--grid)}
@@ -40,9 +40,9 @@
   .empty{padding:1.25rem 0;color:var(--ink-2)}
   .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:.5rem;margin:0 0 1.5rem}
   .kpis div{background:var(--sheet);border:2px solid var(--ink);padding:.8rem .9rem}
-  .kpis b{display:block;font:800 1.9rem/1 Archivo,system-ui,sans-serif;font-stretch:72%;font-variant-numeric:tabular-nums}
-  .kpis span{font-size:.9rem;color:var(--ink-2)}
-  .legendline{font-size:.95rem;color:var(--ink-2);margin:.75rem 0 0}
+  .kpis b{display:block;font:800 var(--fs-headline)/1 Archivo,system-ui,sans-serif;font-stretch:72%;font-variant-numeric:tabular-nums}
+  .kpis span{font-size:var(--fs-small);color:var(--ink-2)}
+  .legendline{font-size:var(--fs-small);color:var(--ink-2);margin:.75rem 0 0}
 </style>
 </head>
 <body>

@@ -492,9 +492,10 @@ async function createSearch(req, env) {
 
 async function handle(req, env) {
   const url = new URL(req.url);
-  // CF-Visitor : le protocole vu par Cloudflare (absent en local, où wrangler dev réécrit l'URL en http://battue.org)
+  // CF-Visitor : le protocole vu par Cloudflare (absent en local, où wrangler dev réécrit l'URL en http://www.battue.org)
   if (visitorScheme(req) === "http") return Response.redirect("https://" + url.host + url.pathname + url.search, 301);
-  if (url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
+  // Une seule adresse : www.battue.org (le navigateur garde le # des liens)
+  if (url.hostname === "battue.org" || url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
   if (url.pathname === "/api/report" && req.method === "POST") return reportAbuse(req, env);
   if (url.pathname === "/api/fiche" && req.method === "POST") return createSheet(req, env);

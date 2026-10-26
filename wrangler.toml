@@ -2,8 +2,8 @@ name = "battue"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"
 routes = [
+  { pattern = "www.battue.org", custom_domain = true },  # en premier : wrangler dev sert sous ce nom
   { pattern = "battue.org", custom_domain = true },
-  { pattern = "www.battue.org", custom_domain = true },
   { pattern = "app.battue.org", custom_domain = true },
 ]
 

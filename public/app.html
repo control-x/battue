@@ -87,7 +87,8 @@
   .leaflet-popup-content-wrapper{border-radius:3px;border:2px solid var(--ink);box-shadow:var(--shadow);padding:0}
   .leaflet-popup-tip{border:2px solid var(--ink);box-shadow:none}
   .leaflet-popup-content{margin:14px 16px;font:400 var(--fs-base)/1.4 Archivo,system-ui,sans-serif;min-width:230px}
-  .leaflet-container a.leaflet-popup-close-button{width:44px;height:44px;color:transparent;overflow:hidden}
+  .pop .links a,.leaflet-control-attribution a{color:var(--ink)}
+  .leaflet-container a.leaflet-popup-close-button{width:44px;height:44px;font-size:0;overflow:hidden}
   .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:12px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
   .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .pop h3 .prio{font-size:var(--fs-caption);letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}

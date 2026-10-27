@@ -66,6 +66,7 @@
   .keys span{display:inline-flex;align-items:center;gap:.3rem}
   .sos{display:flex;align-items:center;gap:.4rem;font-weight:800;font-stretch:80%;text-transform:uppercase;letter-spacing:.03em;font-size:var(--fs-caption);margin-bottom:.3rem}
   .sos #maj{margin:0 0 0 auto;text-transform:none;letter-spacing:0;font-weight:600}
+  .leaflet-container a{color:var(--ink)}  /* pas le bleu de Leaflet ; avant .sos a, qui garde son rouge */
   .sos a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:36px;padding:0 .5rem;border:2px solid var(--grid);border-radius:999px;color:var(--grid);font-size:var(--fs-label);text-decoration:none;font-variant-numeric:tabular-nums}
   .sos a:hover{background:var(--grid);color:#fff}
   .popup-open .dock{display:none}
@@ -87,10 +88,13 @@
   .leaflet-popup-content-wrapper{border-radius:3px;border:2px solid var(--ink);box-shadow:var(--shadow);padding:0}
   .leaflet-popup-tip{border:2px solid var(--ink);box-shadow:none}
   .leaflet-popup-content{margin:14px 16px;font:400 var(--fs-base)/1.4 Archivo,system-ui,sans-serif;min-width:230px}
-  .pop .links a,.leaflet-control-attribution a{color:var(--ink)}
-  .leaflet-container a.leaflet-popup-close-button{width:44px;height:44px;font-size:0;overflow:hidden}
+  .leaflet-container .leaflet-control-attribution a{text-decoration:underline}
+  .leaflet-container a.leaflet-popup-close-button{width:44px;height:44px;border-radius:3px}
+  .leaflet-container a.leaflet-popup-close-button span{display:none}  /* le « × » de Leaflet : notre croix seule */
+  .leaflet-container a.leaflet-popup-close-button:hover,.leaflet-container a.leaflet-popup-close-button:focus-visible{background:var(--sheet-hover)}
+  @media (forced-colors:active){.leaflet-container a.leaflet-popup-close-button::before{forced-color-adjust:none;background:CanvasText}}
   .leaflet-container a.leaflet-popup-close-button::before{content:"";position:absolute;inset:12px;background:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E") center/contain no-repeat}
-  .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  .pop h3{font:800 var(--fs-heading)/1 Archivo,system-ui,sans-serif;font-stretch:70%;text-transform:uppercase;margin:0 0 .35rem;padding-right:28px;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
   .pop h3 .prio{font-size:var(--fs-caption);letter-spacing:.04em;border:2px solid var(--ink);padding:.15rem .35rem}
   .pop .state{margin:.2rem 0 .5rem}
   /* Bas de fiche : outils secondaires, sur une ligne */
@@ -413,7 +417,7 @@ function renderMargins(){
 function zoomClass(){document.getElementById("map").classList.toggle("far",map.getZoom()<15);}
 map.on("zoomend",zoomClass); zoomClass();
 // Fiche ouverte : le bas d'écran s'efface pour laisser la place
-map.on("popupopen",function(){document.body.classList.add("popup-open");});
+map.on("popupopen",function(e){document.body.classList.add("popup-open");var close=e.popup.getElement().querySelector(".leaflet-popup-close-button");if(close)close.setAttribute("aria-label","Fermer");});
 map.on("popupclose",function(){document.body.classList.remove("popup-open");});
 
 // Fenêtres : une croix en haut à droite (Échap est natif) ; fiches de la carte : Échap aussi, où que soit le focus

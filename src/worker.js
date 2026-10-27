@@ -33,27 +33,34 @@
 
 import { DurableObject } from "cloudflare:workers";
 
-const json = (o, st = 200) =>
-  new Response(JSON.stringify(o), { status: st, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
-const clip = (s, n) => String(s ?? "").slice(0, n);
-const hhmm = (s) => (/^\d{2}:\d{2}$/.test(s || "") ? s : "");
+const json = (payload, status = 200) =>
+  new Response(JSON.stringify(payload), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+const clip = (value, length) => String(value ?? "").slice(0, length);
+const hhmm = (value) => (/^\d{2}:\d{2}$/.test(value || "") ? value : "");
+// Corps JSON d'une requête : un objet, sinon null (corps absent, illisible, ou « null »)
+const readJson = async (req) => { try { const body = await req.json(); return body && typeof body === "object" ? body : null; } catch { return null; } };
+const badJson = () => json({ error: "bad json" }, 400);
+const bearer = (req) => (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
 const nowParis = () => new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
 const validId = (id) => /^[A-Z]\d{1,2}$/.test(id || "");
 const randomToken = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
-const randomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
+const randomCode = (length) => Array.from(crypto.getRandomValues(new Uint8Array(length)), (byte) => CODE_CHARS[byte % CODE_CHARS.length]).join("");
 const STATUS_LABELS = { todo: "à faire", doing: "en cours", done: "fait", alert: "signalement / à refaire" };
 const IDLE_MS = 30 * 24 * 3600 * 1000;
 const minutes = (ms) => (ms == null || !isFinite(ms) ? null : Math.round(ms / 60000));
 const parisDay = (t) => new Date(t).toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
-// Département tiré du code postal de l'adresse (2A/2B confondus en 20) ; jamais la ville ni l'adresse
+// Département tiré du code postal de l'adresse (2A/2B confondus en 20) ; jamais la ville ni l'adresse.
+// Pas les décimales d'une adresse « Position 43.60465, 1.44421 » (position sans adresse trouvée)
 const departement = (address) => {
-  const m = /\b(\d{5})\b/.exec(address || "");
-  return m ? (m[1].startsWith("97") ? m[1].slice(0, 3) : m[1].slice(0, 2)) : null;
+  const postcode = /(?<![\d.,])(\d{5})(?![\d.,])/.exec(address || "")?.[1];
+  return postcode ? (postcode.startsWith("97") ? postcode.slice(0, 3) : postcode.slice(0, 2)) : null;
 };
 const NO_VOLUNTEER_MS = 30 * 60 * 1000;
 const AUTH_TIMEOUT_MS = 10 * 1000; // un websocket doit s'authentifier dans ce délai
 const MAX_SOCKETS = 1000;
+const MAX_PENDING_SOCKETS = 50; // pas encore authentifiés : sans quoi le code public suffirait à bloquer les vrais bénévoles
+const MAX_POINTS = 500; // signalements par battue : le lien bénévole est public (QR de l'affiche)
 const REPORT_COOLDOWN_MS = 10 * 60 * 1000; // une notification d'abus au plus par battue dans ce délai
 const GONE = { error: "Recherche introuvable ou clôturée" };
 // Compteurs admin : un nom d'événement, jamais de contenu
@@ -66,7 +73,9 @@ const stubFor = (env, namespace, name) => {
 const searchStub = (env, id) => stubFor(env, env.SEARCH, id);
 const registryStub = (env) => stubFor(env, env.REGISTRY, "registre");
 const sheetStub = (env, id) => stubFor(env, env.SHEET, "fiche:" + id);
-const sha256Hex = async (text) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+const sha256Hex = async (text) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+// Limite large et approximative par connexion, contre la création automatisée ; jamais de captcha
+const withinLimit = async (limiter, req) => !limiter || (await limiter.limit({ key: req.headers.get("CF-Connecting-IP") || "local" })).success;
 const SHEET_IDLE_MS = 3 * 365 * 24 * 3600 * 1000;
 const SHEET_MAX = 2_000_000;
 
@@ -223,7 +232,8 @@ export class Search extends DurableObject {
   scheduleAlarm() {
     const due = [this.state.t + IDLE_MS, ...this.pendingSockets().map((pending) => pending.since + AUTH_TIMEOUT_MS)];
     if (!this.meta.volunteerSeen && !this.meta.alerted) due.push(this.meta.info.created + NO_VOLUNTEER_MS);
-    return this.ctx.storage.setAlarm(Math.min(...due));
+    // Jamais dans le passé : un websocket déjà refermé peut rester listé un moment, l'alarme tournerait en boucle
+    return this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...due)));
   }
 
   // Websockets ouverts mais pas encore authentifiés : refermés après AUTH_TIMEOUT_MS (compatible avec l'hibernation)
@@ -244,8 +254,14 @@ export class Search extends DurableObject {
   publicState() {
     const secteurs = {};
     for (const [id, { o, ...pub }] of Object.entries(this.state.secteurs)) secteurs[id] = pub;
-    const points = Object.entries(this.state.points).map(([id, { o, ...p }]) => ({ id, ...p })).sort((a, b) => a.t - b.t);
+    const points = Object.entries(this.state.points).map(([id, { o, ...point }]) => ({ id, ...point })).sort((first, second) => first.t - second.t);
     return { info: this.meta.info, secteurs, points, now: Date.now() };
+  }
+
+  // Journal : une clé par ligne, pour qu'il grandisse sans réécrire une valeur unique de plus en plus lourde.
+  // « log » : l'ancien journal d'un seul tenant, des battues ouvertes avant ce changement
+  async readLog() {
+    return [...((await this.ctx.storage.get("log")) || []), ...(await this.ctx.storage.list({ prefix: "log:" })).values()];
   }
 
   // entry : ligne du journal horodaté (exportable pour la police), gardé à part car jamais diffusé
@@ -259,11 +275,7 @@ export class Search extends DurableObject {
     }
     this.state.t = Date.now();
     await this.ctx.storage.put("state", this.state);
-    if (entry) {
-      const log = (await this.ctx.storage.get("log")) || [];
-      log.push({ t: this.state.t, txt: entry });
-      await this.ctx.storage.put("log", log);
-    }
+    if (entry) await this.ctx.storage.put("log:" + String(this.state.t).padStart(15, "0") + ":" + randomCode(4), { t: this.state.t, txt: entry });
     await this.scheduleAlarm();
     stat(this.env, event, this.meta.info.test);
     const msg = JSON.stringify(this.publicState());
@@ -291,15 +303,21 @@ export class Search extends DurableObject {
     return true;
   }
 
+  // this.meta est vidé avant toute attente : une seconde clôture arrivée entre-temps ne trouve plus rien (pas de double archive).
+  // Les données sont effacées avant d'écrire au registre : si le registre échoue, rien ne reste.
   async wipe(event, answers = {}) {
-    stat(this.env, event, this.meta?.info.test);
-    if (this.meta && !this.meta.info.test) await registryStub(this.env).archive(this.summary(event, answers));
-    if (this.meta?.id) await registryStub(this.env).close(this.meta.id, event);
+    const meta = this.meta;
+    if (!meta) return;
+    const summary = meta.info.test ? null : this.summary(event, answers);
+    this.meta = undefined;
+    stat(this.env, event, meta.info.test);
     for (const ws of this.ctx.getWebSockets()) try { ws.close(4004, "clôturée"); } catch {}
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();
-    this.meta = undefined;
     this.state = { secteurs: {}, points: {} };
+    const registry = registryStub(this.env);
+    if (summary) await registry.archive(summary);
+    if (meta.id) await registry.close(meta.id, event);
   }
 
   async alarm() {
@@ -334,7 +352,7 @@ export class Search extends DurableObject {
     if (url.pathname === "/ws") {
       if (req.headers.get("Upgrade") !== "websocket") return json({ error: "websocket attendu" }, 426);
       this.closeStaleSockets();
-      if (this.ctx.getWebSockets().length >= MAX_SOCKETS) return json({ error: "Trop de connexions" }, 503);
+      if (this.ctx.getWebSockets().length >= MAX_SOCKETS || this.pendingSockets().length >= MAX_PENDING_SOCKETS) return json({ error: "Trop de connexions" }, 503);
       const { 0: client, 1: server } = new WebSocketPair();
       this.ctx.acceptWebSocket(server);
       server.serializeAttachment({ since: Date.now() });
@@ -342,7 +360,7 @@ export class Search extends DurableObject {
       return new Response(null, { status: 101, webSocket: client });
     }
 
-    const role = this.roleOf((req.headers.get("Authorization") || "").replace(/^Bearer /, ""));
+    const role = this.roleOf(bearer(req));
     if (!role) return json({ error: "lien" }, 403);
     await this.noteVolunteer(role);
     const isAdmin = role === "coord";
@@ -350,78 +368,83 @@ export class Search extends DurableObject {
     if (req.method === "GET" && url.pathname === "/state") return json({ role, ...this.publicState(), ...(isAdmin && { vol: this.meta.vol }) });
     if (req.method === "GET" && url.pathname === "/log") {
       if (!isAdmin) return json({ error: "admin" }, 403);
-      return json({ log: (await this.ctx.storage.get("log")) || [] });
+      return json({ log: await this.readLog() });
     }
     if (req.method === "GET" && url.pathname === "/photo") return json({ photo: (await this.ctx.storage.get("photo")) || "" });
 
     if (req.method !== "POST") return json({ error: "not found" }, 404);
-    let b;
-    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+    const body = await readJson(req);
+    if (!body) return badJson();
 
     if (url.pathname === "/close") {
       if (!isAdmin) return json({ error: "admin" }, 403);
       // Issue facultative, anonyme : la personne a-t-elle été retrouvée, et grâce à la battue ?
-      const outcome = ["found", "not-found"].includes(b.outcome) ? b.outcome : null;
-      const foundByBattue = outcome === "found" && ["yes", "no", "unknown"].includes(b.foundByBattue) ? b.foundByBattue : null;
+      const outcome = ["found", "not-found"].includes(body.outcome) ? body.outcome : null;
+      const foundByBattue = outcome === "found" && ["yes", "no", "unknown"].includes(body.foundByBattue) ? body.foundByBattue : null;
       await this.wipe("close", { outcome, foundByBattue });
       return json({ ok: true });
     }
     if (url.pathname === "/info") {
       if (!isAdmin) return json({ error: "admin" }, 403);
-      this.meta.info.description = clip(b.description, 1000).trim();
+      this.meta.info.description = clip(body.description, 1000).trim();
       await this.ctx.storage.put("meta", this.meta);
       await this.save("info", "Description modifiée par le coordinateur : " + this.meta.info.description);
       return json({ ok: true });
     }
     if (url.pathname === "/sector/start" || url.pathname === "/sector/stop") {
-      if (!validId(b.id)) return json({ error: "id" }, 400);
-      const owner = clip(b.o, 40);
+      if (!validId(body.id)) return json({ error: "id" }, 400);
+      const owner = clip(body.o, 40);
       if (!owner) return json({ error: "o" }, 400);
-      const cur = this.state.secteurs[b.id];
+      const cur = this.state.secteurs[body.id];
       let meta;
       if (url.pathname === "/sector/start") {
         if (cur?.s === "doing" && cur.o !== owner)
           return json({ error: "Zone déjà en cours" + (cur.e ? " par " + cur.e : "") + " depuis " + cur.d }, 409);
         if (cur?.s === "done" && !isAdmin) return json({ error: "admin" }, 403);
         // p : durée prévue en minutes, pour signaler les binômes en retard
-        meta = { s: "doing", e: clip(b.e, 60), n: cur?.n || "", d: nowParis(), f: "", ds: Date.now(), p: Math.min(240, Math.max(0, Math.round(+b.p || 0))), o: owner, t: Date.now() };
+        meta = { s: "doing", e: clip(body.e, 60), n: cur?.n || "", d: nowParis(), f: "", ds: Date.now(), p: Math.min(240, Math.max(0, Math.round(+body.p || 0))), o: owner, t: Date.now() };
       } else {
         if (cur?.s !== "doing") return json({ error: "Cette zone n'est pas en cours" }, 409);
         if (cur.o !== owner) return json({ error: "Seule la personne qui a commencé peut terminer" }, 403);
-        meta = { ...cur, s: "done", n: b.n == null ? cur.n : clip(b.n, 300), f: nowParis(), t: Date.now() };
+        meta = { ...cur, s: "done", n: body.n == null ? cur.n : clip(body.n, 300), f: nowParis(), t: Date.now() };
       }
-      this.state.secteurs[b.id] = meta;
+      this.state.secteurs[body.id] = meta;
       await this.save("sector", meta.s === "doing"
-        ? `Zone ${b.id} commencée par ${meta.e}` + (meta.p ? ` (prévu ${meta.p} min)` : "")
-        : `Zone ${b.id} terminée par ${meta.e}` + (meta.n ? ` ; note : ${meta.n}` : ""));
+        ? `Zone ${body.id} commencée par ${meta.e}` + (meta.p ? ` (prévu ${meta.p} min)` : "")
+        : `Zone ${body.id} terminée par ${meta.e}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       const { o, ...pub } = meta;
       return json({ ok: true, meta: pub });
     }
     if (url.pathname === "/sector/done") {
-      if (!validId(b.id)) return json({ error: "id" }, 400);
-      const cur = this.state.secteurs[b.id];
+      if (!validId(body.id)) return json({ error: "id" }, 400);
+      const cur = this.state.secteurs[body.id];
       if (cur?.s === "doing") return json({ error: "Zone en cours" + (cur.e ? " par " + cur.e : "") }, 409);
       if (cur?.s === "done" && !isAdmin) return json({ error: "admin" }, 403);
-      if (!hhmm(b.d) || !hhmm(b.f)) return json({ error: "Indiquez l'heure de début et de fin" }, 400);
-      const meta = { s: "done", e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
-      this.state.secteurs[b.id] = meta;
-      await this.save("sector", `Zone ${b.id} déclarée fouillée par ${meta.e}, de ${meta.d} à ${meta.f}` + (meta.n ? ` ; note : ${meta.n}` : ""));
+      if (!hhmm(body.d) || !hhmm(body.f)) return json({ error: "Indiquez l'heure de début et de fin" }, 400);
+      const meta = { s: "done", e: clip(body.e, 60), n: clip(body.n, 300), d: hhmm(body.d), f: hhmm(body.f), t: Date.now() };
+      this.state.secteurs[body.id] = meta;
+      await this.save("sector", `Zone ${body.id} déclarée fouillée par ${meta.e}, de ${meta.d} à ${meta.f}` + (meta.n ? ` ; note : ${meta.n}` : ""));
       return json({ ok: true, meta });
     }
     if (url.pathname === "/sector") {
       if (!isAdmin) return json({ error: "admin" }, 403);
-      if (!validId(b.id)) return json({ error: "id" }, 400);
-      if (!["todo", "doing", "done", "alert"].includes(b.s)) return json({ error: "s" }, 400);
-      const meta = { s: b.s, e: clip(b.e, 60), n: clip(b.n, 300), d: hhmm(b.d), f: hhmm(b.f), t: Date.now() };
-      this.state.secteurs[b.id] = meta;
-      await this.save("sector", `Zone ${b.id} corrigée par le coordinateur : ${STATUS_LABELS[b.s]}` + (meta.e ? `, ${meta.e}` : "") + (meta.n ? ` ; note : ${meta.n}` : ""));
-      return json({ ok: true, meta });
+      if (!validId(body.id)) return json({ error: "id" }, 400);
+      if (!["todo", "doing", "done", "alert"].includes(body.s)) return json({ error: "s" }, 400);
+      const edits = { s: body.s, e: clip(body.e, 60), n: clip(body.n, 300), d: hhmm(body.d), f: hhmm(body.f), t: Date.now() };
+      // Même statut : l'équipe en cours garde son appareil (o), son départ (ds) et sa durée prévue (p)
+      const cur = this.state.secteurs[body.id];
+      const meta = cur?.s === body.s ? { ...cur, ...edits } : edits;
+      this.state.secteurs[body.id] = meta;
+      await this.save("sector", `Zone ${body.id} corrigée par le coordinateur : ${STATUS_LABELS[body.s]}` + (meta.e ? `, ${meta.e}` : "") + (meta.n ? ` ; note : ${meta.n}` : ""));
+      const { o, ...pub } = meta;
+      return json({ ok: true, meta: pub });
     }
     if (url.pathname === "/point") {
-      const lat = +b.lat, lng = +b.lng;
+      const lat = +body.lat, lng = +body.lng;
       if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return json({ error: "pos" }, 400);
+      if (this.stats().points >= MAX_POINTS) return json({ error: "Trop de signalements sur cette battue : prévenez le coordinateur par téléphone." }, 429);
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const point = { lat, lng, txt: clip(b.txt, 300), who: clip(b.who, 40), o: clip(b.o, 40), t: Date.now() };
+      const point = { lat, lng, txt: clip(body.txt, 300), who: clip(body.who, 40), o: clip(body.o, 40), t: Date.now() };
       this.state.points[id] = point;
       this.stats().points++;
       await this.ctx.storage.put("meta", this.meta);
@@ -429,10 +452,10 @@ export class Search extends DurableObject {
       return json({ ok: true, id });
     }
     if (url.pathname === "/point/delete") {
-      const point = this.state.points[clip(b.id, 40)];
+      const point = this.state.points[clip(body.id, 40)];
       if (!point) return json({ ok: true });
-      if (!isAdmin && !(point.o && point.o === clip(b.o, 40))) return json({ error: "Seuls le coordinateur et l'auteur peuvent retirer ce signalement" }, 403);
-      delete this.state.points[clip(b.id, 40)];
+      if (!isAdmin && !(point.o && point.o === clip(body.o, 40))) return json({ error: "Seuls le coordinateur et l'auteur peuvent retirer ce signalement" }, 403);
+      delete this.state.points[clip(body.id, 40)];
       await this.save("point-delete", `Signalement retiré (traité) : ${point.txt}`);
       return json({ ok: true });
     }
@@ -458,53 +481,51 @@ export class Search extends DurableObject {
 }
 
 // Création : l'adresse est géocodée dans le navigateur (Base Adresse Nationale), la photo déjà réduite
-async function createSearch(req, env) {
-  // Limite large et approximative par connexion, contre la création automatisée ; jamais de captcha
-  const limit = env.CREATE_LIMITER ? await env.CREATE_LIMITER.limit({ key: req.headers.get("CF-Connecting-IP") || "local" }) : { success: true };
-  if (!limit.success) return json({ error: "Trop de battues créées depuis cette connexion : réessayez dans une minute. En cas d'urgence, appelez le 17." }, 429);
-  let b;
-  try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
-  const lat = +b.lat, lng = +b.lng;
+// internal : appel du test horaire, seul à créer des battues de test (exclues de l'admin et de l'historique)
+async function createSearch(req, env, internal) {
+  if (!(await withinLimit(env.CREATE_LIMITER, req))) return json({ error: "Trop de battues créées depuis cette connexion : réessayez dans une minute. En cas d'urgence, appelez le 17." }, 429);
+  const body = await readJson(req);
+  if (!body) return badJson();
+  const lat = +body.lat, lng = +body.lng;
   if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return json({ error: "Adresse non trouvée" }, 400);
-  if (b.police !== true) return json({ error: "Prévenez d'abord le 17 ou le 112" }, 400);
-  const photo = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(b.photo || "") && b.photo.length < 1_000_000 ? b.photo : "";
-  const whatsapp = /^https:\/\/chat\.whatsapp\.com\/\w+$/.test(b.whatsapp || "") ? b.whatsapp : "";
+  if (body.police !== true) return json({ error: "Prévenez d'abord le 17 ou le 112" }, 400);
+  const photo = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.photo || "") && body.photo.length < 1_000_000 ? body.photo : "";
+  const whatsapp = /^https:\/\/chat\.whatsapp\.com\/\w+$/.test(body.whatsapp || "") ? body.whatsapp : "";
   const info = {
-    name: clip(b.name, 60), address: clip(b.address, 200), lat, lng, since: clip(b.since, 20),
-    description: clip(b.description, 1000), phone: clip(b.phone, 20).replace(/[^\d+ ]/g, ""), whatsapp,
-    hasPhoto: !!photo, created: Date.now(), test: b.test === true, fromSheet: b.fromSheet === true,
+    name: clip(body.name, 60), address: clip(body.address, 200), lat, lng, since: clip(body.since, 20),
+    description: clip(body.description, 1000), phone: clip(body.phone, 20).replace(/[^\d+ ]/g, ""), whatsapp,
+    hasPhoto: !!photo, created: Date.now(), test: internal === true, fromSheet: body.fromSheet === true,
     // Lieux du passé venus de la fiche : à visiter en priorité
-    places: (Array.isArray(b.places) ? b.places : []).slice(0, 12)
+    places: (Array.isArray(body.places) ? body.places : []).slice(0, 12)
       .filter((place) => isFinite(place?.lat) && isFinite(place?.lng) && Math.abs(place.lat) <= 90 && Math.abs(place.lng) <= 180)
       .map((place) => ({ lat: +place.lat, lng: +place.lng, kind: ["home", "found", "habit"].includes(place.kind) ? place.kind : "habit", label: clip(place.label, 60) })),
   };
-  if (isFinite(b.sinceTs) && b.sinceTs > info.created - IDLE_MS && b.sinceTs < info.created + 3600e3) info.sinceTs = +b.sinceTs;
+  if (isFinite(body.sinceTs) && body.sinceTs > info.created - IDLE_MS && body.sinceTs < info.created + 3600e3) info.sinceTs = +body.sinceTs;
   const coord = randomToken(), vol = randomToken();
   for (let attempt = 0; attempt < 5; attempt++) {
-    const id = randomCode();
-    const r = await searchStub(env, id).fetch("https://do/init", { method: "POST", body: JSON.stringify({ id, info, coord, vol, photo }) });
-    if (!r.ok) continue;
+    const id = randomCode(6);
+    const created = await searchStub(env, id).fetch("https://do/init", { method: "POST", body: JSON.stringify({ id, info, coord, vol, photo }) });
+    if (!created.ok) continue;
     await registryStub(env).add(id, info.created, info.test);
     return json({ id, coord, vol });
   }
   return json({ error: "Réessayez" }, 500);
 }
 
-async function handle(req, env) {
+async function handle(req, env, internal = false) {
   const url = new URL(req.url);
   // Une seule adresse : www.battue.org (le navigateur garde le # des liens)
   if (url.hostname === "battue.org" || url.hostname === "app.battue.org") return Response.redirect("https://www.battue.org" + url.pathname + url.search, 301);
   // CF-Visitor : le protocole vu par Cloudflare (absent en local, où wrangler dev réécrit l'URL en http://www.battue.org)
   if (visitorScheme(req) === "http") return Response.redirect("https://" + url.host + url.pathname + url.search, 301);
-  if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env);
+  if (url.pathname === "/api/new" && req.method === "POST") return createSearch(req, env, internal);
   if (url.pathname === "/api/report" && req.method === "POST") return reportAbuse(req, env);
-  if (url.pathname === "/api/fiche" && req.method === "POST") return createSheet(req, env);
+  if (url.pathname === "/api/fiche" && req.method === "POST") return createSheet(req, env, internal);
   const sheetApi = url.pathname.match(/^\/api\/f\/([a-z0-9]{10})$/);
   if (sheetApi) return sheetRequest(req, env, sheetApi[1]);
   if (/^\/f\/[a-z0-9]{10}\/?$/.test(url.pathname)) return env.ASSETS.fetch(new Request(new URL("/fiche", url), req));
   if (url.pathname.startsWith("/api/admin/")) {
-    const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
-    if (!env.ADMIN_TOKEN || token !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
+    if (!env.ADMIN_TOKEN || bearer(req) !== env.ADMIN_TOKEN) return json({ error: "admin" }, 403);
     if (url.pathname === "/api/admin/stats") return adminStats(env);
     if (url.pathname === "/api/admin/searches") return adminSearches(env);
     if (url.pathname === "/api/admin/history") return json({ history: await registryStub(env).history() });
@@ -525,11 +546,11 @@ async function handle(req, env) {
 async function adminStats(env) {
   if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) return json({ error: "Secrets CF_ACCOUNT_ID et CF_API_TOKEN manquants" }, 500);
   const sql = async (query) => {
-    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`, {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/analytics_engine/sql`, {
       method: "POST", headers: { Authorization: "Bearer " + env.CF_API_TOKEN }, body: query + " FORMAT JSON",
     });
-    if (!r.ok) throw new Error("Analytics Engine " + r.status + " : " + (await r.text()).slice(0, 200));
-    return (await r.json()).data;
+    if (!response.ok) throw new Error("Analytics Engine " + response.status + " : " + (await response.text()).slice(0, 200));
+    return (await response.json()).data;
   };
   const counts = (days) => sql(`SELECT blob1 AS event, SUM(_sample_interval) AS n FROM battue WHERE blob2 = 'réel' AND timestamp > NOW() - INTERVAL '${days}' DAY GROUP BY event`);
   try {
@@ -544,16 +565,17 @@ async function adminStats(env) {
 }
 
 // Fiches de préparation. Authorization: Bearer <jeton d'écriture> ; le contenu est déjà chiffré.
-async function createSheet(req, env) {
-  let b;
-  try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
-  if (typeof b.token !== "string" || b.token.length < 40) return json({ error: "jeton" }, 400);
-  if (typeof b.data !== "string" || b.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
-  const tokenHash = await sha256Hex(b.token);
+async function createSheet(req, env, internal) {
+  if (!(await withinLimit(env.SHEET_LIMITER, req))) return json({ error: "Trop de fiches créées depuis cette connexion : réessayez dans une minute." }, 429);
+  const body = await readJson(req);
+  if (!body) return badJson();
+  if (typeof body.token !== "string" || body.token.length < 40) return json({ error: "jeton" }, 400);
+  if (typeof body.data !== "string" || body.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
+  const tokenHash = await sha256Hex(body.token);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const id = Array.from(crypto.getRandomValues(new Uint8Array(10)), (x) => CODE_CHARS[x % CODE_CHARS.length]).join("");
-    if (await sheetStub(env, id).init(tokenHash, b.data)) {
-      stat(env, "sheet-create", b.test === true);
+    const id = randomCode(10);
+    if (await sheetStub(env, id).init(tokenHash, body.data)) {
+      stat(env, "sheet-create", internal === true);
       return json({ id, version: 1 });
     }
   }
@@ -561,7 +583,7 @@ async function createSheet(req, env) {
 }
 
 async function sheetRequest(req, env, id) {
-  const tokenHash = await sha256Hex((req.headers.get("Authorization") || "").replace(/^Bearer /, ""));
+  const tokenHash = await sha256Hex(bearer(req));
   const stub = sheetStub(env, id);
   if (req.method === "GET") {
     const sheet = await stub.read(tokenHash);
@@ -569,10 +591,10 @@ async function sheetRequest(req, env, id) {
   }
   if (req.method === "DELETE") return (await stub.remove(tokenHash)) ? json({ ok: true }) : json({ error: "Fiche introuvable" }, 404);
   if (req.method === "PUT") {
-    let b;
-    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
-    if (typeof b.data !== "string" || b.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
-    const result = await stub.write(tokenHash, b.data, b.version);
+    const body = await readJson(req);
+    if (!body) return badJson();
+    if (typeof body.data !== "string" || body.data.length > SHEET_MAX) return json({ error: "Fiche trop lourde : choisissez une photo plus petite" }, 413);
+    const result = await stub.write(tokenHash, body.data, body.version);
     if (result.status === 409) return json({ error: "La fiche a été modifiée entre-temps par un proche : rechargez la page avant d'enregistrer." }, 409);
     return result.status === 200 ? json({ ok: true, version: result.version }) : json({ error: "Fiche introuvable" }, 404);
   }
@@ -582,8 +604,8 @@ async function sheetRequest(req, env, id) {
 // Signalement d'abus depuis une carte : le motif est gardé dans le registre (visible dans /admin, supprimé à la fermeture),
 // l'admin est prévenu par ntfy avec le seul code de la battue, au plus une fois par REPORT_COOLDOWN_MS.
 async function reportAbuse(req, env) {
-  let body;
-  try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+  const body = await readJson(req);
+  if (!body) return badJson();
   const id = String(body.id || "");
   if (!/^[a-z0-9]{6}$/.test(id)) return json({ error: "Code de battue invalide" }, 400);
   const limit = env.REPORT_LIMITER ? await env.REPORT_LIMITER.limit({ key: id }) : { success: true };
@@ -609,8 +631,8 @@ async function adminSearches(env) {
 
 // Fermeture par l'admin (abus, battue oubliée) : même effet qu'une clôture par le coordinateur
 async function adminCloseSearch(req, env) {
-  let body;
-  try { body = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+  const body = await readJson(req);
+  if (!body) return badJson();
   const id = String(body.id || "").trim().toLowerCase();
   if (!/^[a-z0-9]{6}$/.test(id)) return json({ error: "Code de battue invalide (6 caractères)" }, 400);
   const existed = await searchStub(env, id).adminClose();
@@ -621,15 +643,15 @@ async function adminCloseSearch(req, env) {
 // Test de bout en bout : crée, rejoint, commence un secteur, signale, clôture, vérifie la suppression
 async function selfTest(env) {
   const call = async (path, token, body) => {
-    const r = await handle(new Request("https://www.battue.org" + path, {
+    const response = await handle(new Request("https://www.battue.org" + path, {
       method: body ? "POST" : "GET",
       headers: token ? { Authorization: "Bearer " + token } : {},
       body: body && JSON.stringify(body),
-    }), env);
-    return { status: r.status, body: await r.json() };
+    }), env, true);
+    return { status: response.status, body: await response.json() };
   };
   const expect = (ok, step) => { if (!ok) throw new Error(step); };
-  const created = await call("/api/new", null, { name: "Test", address: "test", lat: 48.85, lng: 2.35, police: true, test: true });
+  const created = await call("/api/new", null, { name: "Test", address: "test", lat: 48.85, lng: 2.35, police: true });
   expect(created.status === 200, "création");
   const { id, coord, vol } = created.body;
   expect((await call(`/api/r/${id}/state`, vol)).body.role === "vol", "lien bénévole");
@@ -645,10 +667,10 @@ async function selfTest(env) {
   // Fiche : création, lecture, modification, conflit de version, suppression
   const token = "t".repeat(43), auth = { Authorization: "Bearer " + token };
   const sheetCall = async (path, method, body, headers = auth) => {
-    const r = await handle(new Request("https://www.battue.org" + path, { method, headers, body: body && JSON.stringify(body) }), env);
-    return { status: r.status, body: await r.json() };
+    const response = await handle(new Request("https://www.battue.org" + path, { method, headers, body: body && JSON.stringify(body) }), env, true);
+    return { status: response.status, body: await response.json() };
   };
-  const sheet = await sheetCall("/api/fiche", "POST", { token, data: "chiffré", test: true }, {});
+  const sheet = await sheetCall("/api/fiche", "POST", { token, data: "chiffré" }, {});
   expect(sheet.status === 200, "fiche créée");
   const sheetPath = "/api/f/" + sheet.body.id;
   expect((await sheetCall(sheetPath, "GET")).body.data === "chiffré", "fiche lue");
@@ -667,9 +689,9 @@ const visitorScheme = (req) => { try { return JSON.parse(req.headers.get("CF-Vis
 
 // HTTPS seulement (HSTS), en production ; pas en local ni sur l'aperçu
 async function serve(req, env) {
-  const res = await handle(req, env);
-  if (res.status === 101 || visitorScheme(req) !== "https") return res;
-  const secured = new Response(res.body, res);
+  const response = await handle(req, env);
+  if (response.status === 101 || visitorScheme(req) !== "https") return response;
+  const secured = new Response(response.body, response);
   secured.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return secured;
 }

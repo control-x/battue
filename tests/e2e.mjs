@@ -60,6 +60,13 @@ const [first, second] = await Promise.all(["appareil-1", "appareil-2"].map((devi
   api(`/api/r/${search.id}/sector/start`, { method: "POST", token: search.vol, body: { id: "G7", e: device, o: device, p: 60 } })));
 check([first.status, second.status].sort().join() === "200,409", `zone prise en même temps : un succès, un refus (${first.status}, ${second.status})`);
 
+// Correction du coordinateur sur une zone en cours : l'équipe garde la main pour la terminer
+const holder = first.status === 200 ? "appareil-1" : "appareil-2";
+check((await api(`/api/r/${search.id}/sector`, { method: "POST", token: search.coord, body: { id: "G7", s: "doing", e: holder, n: "Note du coordinateur" } })).status === 200, "zone : note corrigée par le coordinateur");
+check((await api(`/api/r/${search.id}/sector/stop`, { method: "POST", token: search.vol, body: { id: "G7", o: holder } })).status === 200, "zone : après correction, l'équipe peut toujours la terminer");
+const log = (await api(`/api/r/${search.id}/log`, { token: search.coord })).body.log || [];
+check(log.length >= 4 && log.every((line, index) => !index || line.t >= log[index - 1].t) && log.some((line) => line.txt.includes("Zone G7 corrigée")), "journal : lignes dans l'ordre");
+
 // Signalement hors bornes refusé, signalement valide accepté
 check((await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 120, lng: 2.3, txt: "x" } })).status === 400, "signalement hors bornes refusé");
 const point = await api(`/api/r/${search.id}/point`, { method: "POST", token: search.vol, body: { lat: 48.87, lng: 2.33, txt: "x", o: "appareil-auteur" } });
@@ -76,9 +83,13 @@ check((await api(`/api/r/${search.id}/state`, { token: search.vol })).body.info?
 // Abus : battue inexistante refusée, motif visible dans l'admin, débit limité
 check((await api("/api/report", { method: "POST", body: { id: "zzzzzz", reason: "x" } })).status === 404, "abus : battue inexistante refusée");
 check((await api("/api/report", { method: "POST", body: { id: search.id, reason: "Motif de test" } })).status === 200, "abus : signalement accepté");
+// « test » envoyé par un client : ignoré, la battue reste visible de l'admin
+const sneaky = (await api("/api/new", { method: "POST", body: { name: "Test", address: "test", lat: 48.85, lng: 2.35, police: true, test: true } })).body;
 const admin = await api("/api/admin/searches", { token: ADMIN_TOKEN });
 const listed = (admin.body.searches || []).find((row) => row.id === search.id);
 check(listed?.reports?.[0]?.reason === "Motif de test", "abus : motif visible dans l'admin");
+check((admin.body.searches || []).some((row) => row.id === sneaky.id), "battue marquée « test » par un client : visible de l'admin");
+await api(`/api/r/${sneaky.id}/close`, { method: "POST", token: sneaky.coord, body: {} });
 const burst = await Promise.all(Array.from({ length: 8 }, () => api("/api/report", { method: "POST", body: { id: search.id } })));
 check(burst.some((response) => response.status === 429), "abus : débit limité (429)");
 
@@ -91,6 +102,17 @@ await api(`/api/r/${other.id}/close`, { method: "POST", token: other.coord, body
 check((await api("/api/report", { method: "POST", body: { id: other.id } })).status === 404, "abus : battue fermée refusée");
 const history = (await api("/api/admin/history", { token: ADMIN_TOKEN })).body.history || [];
 check(history.some((row) => row.outcome === "found" && row.foundByBattue === "yes") && history.every((row) => !("id" in row)), "historique : issue gardée, sans code de battue");
+
+// Corps « null » : refusé proprement, pas d'erreur 500
+const nullBodies = await Promise.all(["/api/new", "/api/report", "/api/fiche"].map((path) => fetch(BASE + path, { method: "POST", body: "null" })));
+check(nullBodies.every((response) => response.status === 400), `corps null refusé (${nullBodies.map((response) => response.status)})`);
+
+// Signalements plafonnés par battue : le lien bénévole est public
+const crowded = await newSearch();
+for (let batch = 0; batch < 10; batch++)
+  await Promise.all(Array.from({ length: 50 }, () => api(`/api/r/${crowded.id}/point`, { method: "POST", token: crowded.vol, body: { lat: 48.87, lng: 2.33, txt: "x" } })));
+check((await api(`/api/r/${crowded.id}/point`, { method: "POST", token: crowded.vol, body: { lat: 48.87, lng: 2.33, txt: "x" } })).status === 429, "signalements plafonnés (429)");
+await api(`/api/r/${crowded.id}/close`, { method: "POST", token: crowded.coord, body: {} });
 
 console.log(failures ? `\n${failures} échec(s)` : "\nTout est bon.");
 process.exit(failures ? 1 : 0);

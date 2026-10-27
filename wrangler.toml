@@ -57,6 +57,14 @@ namespace_id = "1002"
   limit = 5
   period = 60
 
+[[ratelimits]]
+name = "SHEET_LIMITER"
+namespace_id = "1003"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
 # Compteurs admin (aucun contenu de recherche)
 [[analytics_engine_datasets]]
 binding = "STATS"

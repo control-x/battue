@@ -24,7 +24,6 @@
   .tool:hover{background:var(--paper);border-color:var(--ink)}
   .tool-primary{background:var(--grid);color:#fff;border-color:var(--grid)}
   .tool-primary:hover{background:var(--grid-deep);border-color:var(--grid-deep)}
-  .tool[hidden]{display:none}
 
   #mapwrap{position:absolute;left:0;right:0;bottom:0;top:calc(68px + env(safe-area-inset-top,0px))}
   #map{position:absolute;inset:0;background:var(--paper);font-family:Archivo,system-ui,sans-serif}
@@ -58,7 +57,6 @@
   #info.mine{color:var(--park-ink);cursor:pointer;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
   #sum{all:unset;display:block;margin-top:.15rem;font-weight:700;cursor:pointer;color:var(--ink);text-decoration:underline;text-decoration-color:var(--grid-soft);text-underline-offset:3px}
   #sum:focus-visible{outline:3px solid var(--focus)}
-  #sum[hidden]{display:none}
   #sum .late{color:var(--grid)}
   #list{max-height:34vh;overflow:auto;margin:.4rem 0;border-top:2px solid var(--ink)}
   #list div{padding:.45rem 0;border-bottom:1px solid var(--hairline);cursor:pointer}
@@ -142,14 +140,12 @@
   .dlabel{font:800 var(--fs-label)/1.2 Archivo,system-ui,sans-serif;font-stretch:72%;text-transform:uppercase;margin:1rem 0 .25rem}
 
   #toast{position:absolute;z-index:1002;left:10px;right:10px;top:calc(76px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;background:var(--sheet);border:3px dashed var(--grid);box-shadow:var(--shadow);font-weight:700}
-  #toast[hidden]{display:none}
   #toast .i{color:var(--grid);width:24px;height:24px}
   #toast span{flex:1}
   #toast button{min-height:44px;padding:.4em .8em}
   #toast.ok{border:2px solid var(--ink)}
   #toast.ok .i{color:var(--park-ink)}
   #toast .tclose .i{color:var(--ink)}
-  #gone[hidden]{display:none}
   #gone{position:absolute;inset:0;z-index:2000;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:24px}
   #gone .cartouche{max-width:26rem;text-align:left;font-size:var(--fs-body)}
   #gone .brand{margin-bottom:1rem}
@@ -320,6 +316,7 @@
 </dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/common.js"></script>
 <script>
 // Fond de carte : à changer ici pour basculer vers un autre fournisseur
 var TILES="https://tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -333,8 +330,6 @@ var INK=token("ink"), GRID_RED=token("grid"), FOCUS=token("focus");
 var FILLS={todo:{fillOpacity:0},doing:{fillColor:token("road"),fillOpacity:.62},done:{fillColor:"url(#hatch-done)",fillOpacity:1},alert:{fillColor:GRID_RED,fillOpacity:.42}};
 function icon(name){return '<svg class="i" aria-hidden="true"><use href="/icons.svg#i-'+name+'"/></svg>';}
 var LABELS={todo:"À faire",doing:"En cours",done:"Fait",alert:"Signalement / à refaire"};
-function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
-function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
 function nowHHMM(){var d=new Date();return ("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);}
 function since(ds){var m=Math.max(0,Math.round((Date.now()-ds)/60000));return m<60?m+" min":Math.floor(m/60)+" h "+("0"+m%60).slice(-2);}
 function hhmm(t){var d=new Date(t);return d.getHours()+" h "+("0"+d.getMinutes()).slice(-2);}
@@ -361,7 +356,9 @@ function team(v){return ls("battue_team_"+SEARCH_ID,v)||(v===undefined?ls("rc_wh
 function late(s){return s.s==="doing"&&s.p&&Date.now()>s.ds+s.p*60000;}
 function volLink(){return location.origin+location.pathname+"#v="+(ROLE==="coord"?VOL:TOKEN);}
 
-function showGone(msg){document.getElementById("gonemsg").textContent=msg;document.getElementById("gone").hidden=false;}
+// Battue finie : le premier message reste (sauf force), plus de rechargement ni de reconnexion
+var gone=false;
+function showGone(msg,force){if(gone&&!force)return;gone=true;document.getElementById("gonemsg").textContent=msg;document.getElementById("gone").hidden=false;}
 if(!TOKEN)showGone("Lien incomplet : demandez le lien de la battue au coordinateur.");
 
 var map=L.map("map",{zoomControl:false,zoomSnap:0.25}).setView([46.6,2.4],6);
@@ -629,7 +626,7 @@ function setup(){
   }).catch(function(){});
   if(ROLE==="coord")setupCoordinator();
   buildGrid(INFO.lat,INFO.lng);
-  loadWeather();
+  loadWeather(); setInterval(loadWeather,3600e3);
   if(ROLE==="vol"&&!ls("battue_team_"+SEARCH_ID))welcome();
   else if(cells[focusId])openCell(focusId);
 }
@@ -639,7 +636,7 @@ function applyState(j){
   sectorStatus=j.secteurs||{}; drawPoints(j.points); paint();
 }
 function load(){
-  if(!TOKEN)return;
+  if(!TOKEN||gone)return;
   fetch(API+"/state",{cache:"no-store",headers:{Authorization:"Bearer "+TOKEN}}).then(function(r){
     if(r.status===404)return r.json().then(function(j){showGone(j.error);});
     if(r.status===403){ls("battue_"+SEARCH_ID,"");return showGone("Lien invalide : demandez le lien de la battue au coordinateur.");}
@@ -653,7 +650,7 @@ function load(){
 // Websocket : le worker pousse l'état à chaque changement ; sinon on retombe sur le rafraîchissement périodique
 var ws=null, wsLive=false;
 function connectWs(){
-  if(!TOKEN||(ws&&ws.readyState<2))return;
+  if(!TOKEN||gone||(ws&&ws.readyState<2))return;
   ws=new WebSocket(location.origin.replace(/^http/,"ws")+API+"/ws");
   ws.onopen=function(){ws.send("auth "+TOKEN+" "+DEVICE);};
   // « En direct » seulement quand le serveur a accepté le jeton et envoyé un état valide ; sinon retour au rafraîchissement
@@ -665,9 +662,10 @@ function connectWs(){
     if(!wsLive){wsLive=true;var maj=document.getElementById("maj");maj.textContent="En direct";maj.className="live";}
   };
   ws.onclose=function(e){
-    wsLive=false; document.getElementById("maj").className=""; load();
+    wsLive=false; document.getElementById("maj").className="";
     if(e.code===4004)return showGone("La recherche a été clôturée. Merci à tous.");
-    if(e.code===4003)return;
+    load(); // une battue disparue répond 404 : showGone, et la reconnexion s'arrête
+    if(e.code===4003||gone)return;
     document.getElementById("maj").textContent="Reconnexion…";
     setTimeout(connectWs,3000);
   };
@@ -707,27 +705,22 @@ function renderClock(){
   if(!INFO)return;
   var start=INFO.since?new Date(INFO.since).getTime():INFO.created, parts=[icon("clock")+"Disparu(e) depuis "+since(start)];
   if(weather&&weather.daily){
-    var d=weather.daily, now=Date.now(), sunset=new Date(d.sunset[0]).getTime(), sunrise=new Date(d.sunrise[1]).getTime();
-    parts.push(now<sunset?icon("moon")+"Nuit à "+hhmm(sunset):now<sunrise?icon("moon")+"Nuit · jour à "+hhmm(sunrise):"");
+    // Prochain coucher et prochain lever : si le lever vient d'abord, il fait nuit
+    var d=weather.daily, now=Date.now();
+    function next(times){return times.map(function(t){return new Date(t).getTime();}).filter(function(t){return t>now;})[0];}
+    var sunset=next(d.sunset), sunrise=next(d.sunrise);
+    parts.push(sunrise&&(!sunset||sunrise<sunset)?icon("moon")+"Nuit · jour à "+hhmm(sunrise):sunset?icon("moon")+"Nuit à "+hhmm(sunset):"");
     parts.push(icon("temp")+Math.round(weather.current.temperature_2m)+"° (min "+Math.round(Math.min.apply(null,d.temperature_2m_min))+"°)");
   }
   document.getElementById("clock").innerHTML=parts.filter(Boolean).map(function(x){return "<span>"+x+"</span>";}).join("");
 }
 
 // Affiche imprimable (ou enregistrée en PDF depuis la fenêtre d'impression), avec un QR code vers la carte
-function loadScript(src,integrity){
-  return new Promise(function(ok,ko){var el=document.createElement("script");el.src=src;el.integrity=integrity;el.crossOrigin="anonymous";el.onload=ok;el.onerror=ko;document.head.appendChild(el);});
-}
-function qrDataUrl(){
-  return (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
-    var qr=qrcode(0,"M"); qr.addData(volLink()); qr.make(); return qr.createDataURL(8,2);
-  });
-}
 function posterTitle(){return INFO.name?"Avez-vous vu "+INFO.name+" ?":"Personne disparue";}
 function posterCall(){return "Si vous la ou le voyez, appelez le\n"+(INFO.phone||"17");}
 document.getElementById("print").onclick=function(){
   var btn=this;
-  qrDataUrl().then(function(qr){
+  qrDataUrl(volLink()).then(function(qr){
     var pqr=document.getElementById("pqr"); pqr.src=qr; pqr.hidden=false;
     document.getElementById("pname").textContent=posterTitle();
     var photo=document.getElementById("aphoto"), pphoto=document.getElementById("pphoto");
@@ -755,7 +748,7 @@ function wrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines){
 }
 function drawPoster(){
   var W=1080, H=1527, M=60, photo=document.getElementById("aphoto");
-  return Promise.all([qrDataUrl().then(loadImage),photo.hidden?null:loadImage(photo.src),document.fonts.load("800 80px Archivo")]).then(function(r){
+  return Promise.all([qrDataUrl(volLink()).then(loadImage),photo.hidden?null:loadImage(photo.src),document.fonts.load("800 80px Archivo")]).then(function(r){
     var qr=r[0], img=r[1], c=document.createElement("canvas"); c.width=W; c.height=H;
     var ctx=c.getContext("2d"); if("fontStretch" in ctx)ctx.fontStretch="condensed";
     ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
@@ -843,19 +836,18 @@ function setupCoordinator(){
       alertsBtn.hidden=p==="granted";
     });
   };
-  var volLink=location.origin+location.pathname+"#v="+VOL;
   var coordLink=location.origin+location.pathname+"#c="+TOKEN;
   var dlg=document.getElementById("dinvite"), btn=document.getElementById("invite");
   btn.hidden=false; btn.onclick=function(){dlg.showModal();};
-  document.getElementById("volLink").value=volLink;
+  document.getElementById("volLink").value=volLink();
   document.getElementById("coordLink").value=coordLink;
-  document.getElementById("cpVol").onclick=function(){copy(volLink,this,"Lien bénévoles copié");};
+  document.getElementById("cpVol").onclick=function(){copy(volLink(),this,"Lien bénévoles copié");};
   document.getElementById("cpCoord").onclick=function(){copy(coordLink,this,"Lien coordinateur copié");};
   var text=(INFO.name?"🔎 Battue pour retrouver "+INFO.name:"🔎 Battue")+"\n"+
     (INFO.since?"Vu(e) pour la dernière fois "+fmtSince(INFO.since)+", "+INFO.address:"Dernier lieu connu : "+INFO.address)+"\n"+
     (INFO.description?INFO.description+"\n":"")+
     (INFO.phone?"Si vous la ou le voyez : appelez le "+INFO.phone+"\n":"")+
-    "\nRejoignez la recherche, choisissez une zone sur la carte :\n"+volLink+"\n\n"+
+    "\nRejoignez la recherche, choisissez une zone sur la carte :\n"+volLink()+"\n\n"+
     "Consignes : regarder sans appeler son nom, fouiller buissons, fossés et berges, ne pas entrer chez les gens, jamais de berge seul ni la nuit.";
   document.getElementById("share").onclick=function(){
     // Sur téléphone, le partage natif joint la photo ; sinon on ouvre WhatsApp avec le texte seul
@@ -889,15 +881,16 @@ function setupCoordinator(){
   closeBtn.onclick=function(){
     if(!armed){armed=true;closeBtn.textContent="Confirmer : tout supprimer";return;}
     var picked=document.querySelector("input[name=outcome]:checked"), by=document.querySelector("input[name=foundby]:checked");
-    post("/close",{outcome:picked?picked.value:"",foundByBattue:by?by.value:""}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.");})
-      .catch(function(err){document.getElementById("closemsg").textContent=err.message;});
+    closeBtn.disabled=true;
+    post("/close",{outcome:picked?picked.value:"",foundByBattue:by?by.value:""}).then(function(){ls("battue_"+SEARCH_ID,"");dlg.close();showGone("Recherche clôturée, toutes les données ont été supprimées.",true);})
+      .catch(function(err){closeBtn.disabled=false;document.getElementById("closemsg").textContent=err.message;});
   };
   if(justCreated)dlg.showModal();
 }
 
 // Position du bénévole (reste sur le téléphone)
 var me=null, meAcc=null, first=true, myPos=null;
-document.getElementById("loc").onclick=function(){first=true;map.locate({watch:true,enableHighAccuracy:true});};
+document.getElementById("loc").onclick=function(){first=true;map.stopLocate();map.locate({watch:true,enableHighAccuracy:true});}; // stopLocate : un seul suivi GPS à la fois
 map.on("locationfound",function(e){
   myPos=e.latlng;
   if(!me){me=L.circleMarker(e.latlng,{radius:8,color:"#fff",weight:3,fillColor:FOCUS,fillOpacity:1}).addTo(map);

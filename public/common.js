@@ -1,4 +1,19 @@
-// Outils partagés par la création de battue et la fiche de préparation
+// Outils partagés par les pages : création de battue, carte, fiche de préparation, admin
+
+// localStorage sans planter (navigation privée, stockage bloqué)
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null;}}
+// Texte sûr dans du HTML
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
+// Script tiers chargé à la demande, vérifié par son empreinte
+function loadScript(src,integrity){
+  return new Promise(function(ok,ko){var el=document.createElement("script");el.src=src;el.integrity=integrity;el.crossOrigin="anonymous";el.onload=ok;el.onerror=ko;document.head.appendChild(el);});
+}
+// QR code en image (qrcode-generator, chargé à la première demande)
+function qrDataUrl(text){
+  return (window.qrcode?Promise.resolve():loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js","sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1")).then(function(){
+    var qr=qrcode(0,"M"); qr.addData(text); qr.make(); return qr.createDataURL(8,2);
+  });
+}
 
 // Base Adresse Nationale, appelée depuis le navigateur
 function geocode(q,limit){

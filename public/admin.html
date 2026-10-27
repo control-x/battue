@@ -84,13 +84,13 @@
     <div id="counters"><p class="empty">Chargement…</p></div>
   </section>
 </main>
+<script src="/common.js"></script>
 <script>
 // Jeton admin dans la partie # du lien (/admin#t=…), gardé sur cet appareil
 var hash=new URLSearchParams(location.hash.slice(1)), TOKEN=hash.get("t");
 try{if(TOKEN)localStorage.setItem("battue_admin",TOKEN);else TOKEN=localStorage.getItem("battue_admin");}catch(e){}
 if(hash.has("t"))history.replaceState(null,"",location.pathname);
 
-function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(x){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[x];});}
 function ago(t){if(!t)return "–";var m=Math.max(0,Math.round((Date.now()-t)/60000));return m<60?m+" min":m<1440?Math.floor(m/60)+" h "+("0"+m%60).slice(-2):Math.floor(m/1440)+" j";}
 function when(t){return t?new Date(t).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"jamais";}
 function api(path,body){
